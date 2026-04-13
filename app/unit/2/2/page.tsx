@@ -53,60 +53,62 @@ export default function Unit2Map2Page() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 via-cyan-50 to-amber-50">
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-md">
-        <div className="border-b-4 border-purple-200">
-          <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-            <Link href="/">
-              <Button variant="ghost" className="text-foreground hover:text-purple-600 hover:bg-purple-50 rounded-xl">
-                <ArrowRight className="w-5 h-5 ml-2" />
-                العودة للرئيسية
-              </Button>
-            </Link>
-            
-            <h1 className="text-base md:text-lg font-bold text-foreground flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-center sm:text-right">
-              <div className="hidden sm:flex items-center gap-2 bg-purple-100 px-3 py-1 rounded-full">
-                <Cloud className="w-5 h-5 text-purple-600 shrink-0" />
-                <span>الوحدة الثانية</span>
-              </div>
-              <span className="text-purple-600 leading-snug">الفلاحة والصيد البحري في البلاد التونسية</span>
-            </h1>
-            
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setIsSoundEnabled(!isSoundEnabled)
-                  playSound("click")
-                }}
-                className="rounded-full"
-                title={isSoundEnabled ? "إيقاف المؤثرات الصوتية" : "تشغيل المؤثرات الصوتية"}
-              >
-                {isSoundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleMusic}
-                className="rounded-full"
-                title={isMusicOn ? "إيقاف الموسيقى" : "تشغيل الموسيقى"}
-              >
-                {isMusicOn ? <Music className="w-5 h-5 text-primary" /> : <MicOff className="w-5 h-5" />}
-              </Button>
-              <div className="w-12 h-12">
-                <ExplorerCharacter size="sm" />
+      <header className="sticky top-0 z-50 shadow-md">
+        <div className="border-b-4 border-purple-200 bg-white/95 backdrop-blur-sm">
+          <div className="container mx-auto px-4 pb-2">
+            <div className="flex h-16 items-center justify-between">
+              <Link href="/">
+                <Button variant="ghost" className="text-foreground hover:bg-purple-50 hover:text-purple-600 rounded-xl">
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                  العودة للرئيسية
+                </Button>
+              </Link>
+
+              <h1 className="flex flex-1 flex-col items-center gap-1 text-center text-base font-bold text-foreground sm:flex-row sm:items-center sm:justify-center sm:gap-3 sm:text-right md:text-lg">
+                <div className="hidden items-center gap-2 rounded-full bg-purple-100 px-3 py-1 sm:flex">
+                  <Cloud className="h-5 w-5 shrink-0 text-purple-600" />
+                  <span>الوحدة الثانية</span>
+                </div>
+                <span className="leading-snug text-purple-600">الفلاحة والصيد البحري في البلاد التونسية</span>
+              </h1>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setIsSoundEnabled(!isSoundEnabled)
+                    playSound("click")
+                  }}
+                  className="rounded-full"
+                  title={isSoundEnabled ? "إيقاف المؤثرات الصوتية" : "تشغيل المؤثرات الصوتية"}
+                >
+                  {isSoundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleMusic}
+                  className="rounded-full"
+                  title={isMusicOn ? "إيقاف الموسيقى" : "تشغيل الموسيقى"}
+                >
+                  {isMusicOn ? <Music className="h-5 w-5 text-primary" /> : <MicOff className="h-5 w-5" />}
+                </Button>
+                <div className="h-12 w-12">
+                  <ExplorerCharacter size="sm" />
+                </div>
               </div>
             </div>
+            <UnitMapNav
+              unit={2}
+              mapIndex={2}
+              totalMaps={2}
+              lessonTitle={UNIT_2_LESSON_2}
+              mapTitle={UNIT_2_MAP_PRODUCTION}
+              theme="purple"
+            />
           </div>
         </div>
-        <UnitMapNav
-          unit={2}
-          mapIndex={2}
-          totalMaps={2}
-          lessonTitle={UNIT_2_LESSON_2}
-          mapTitle={UNIT_2_MAP_PRODUCTION}
-          theme="purple"
-        />
       </header>
 
       <main className="container mx-auto px-4 py-6">

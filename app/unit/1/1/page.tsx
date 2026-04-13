@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
-import { ArrowRight, HelpCircle, BookOpen, Users, Building2, MapPin, Volume2, VolumeX, Sparkles, Music, MicOff } from "lucide-react"
+import { ArrowRight, HelpCircle, BookOpen, Users, Building2, MapPin, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ExplorerCharacter } from "@/components/explorer-character"
 import { SpeechBubble } from "@/components/speech-bubble"
@@ -10,21 +10,15 @@ import { QuizDialog } from "@/components/quiz-dialog"
 import { InteractiveTunisiaMap } from "@/components/maps/InteractiveTunisiaMap"
 import { ChapterChatbot } from "@/components/chapter-chatbot"
 import { UnitMapNav } from "@/components/unit-map-nav"
-import { AudioPlayer } from "@/components/audio/AudioPlayer"
-import { UnitProgressBar } from "@/components/progress/UnitProgressBar"
 import { cn } from "@/lib/utils"
-import { playSoundSimple } from "@/lib/sounds"
-import { useBackgroundMusicToggle } from "@/hooks/useBackgroundMusicToggle"
+import { playDensityLegendSound, playSoundSimple } from "@/lib/sounds"
 import { governorates, type GovernorateData } from "@/lib/tunisia-geojson"
 import { addTimeSpent } from "@/lib/analytics"
 import { useGamification } from "@/store/gamification-context"
-import { getRecommendedNextStep } from "@/lib/recommendations"
 
 const UNIT_1_LESSON =
   "الدرس 1: التوزع الجغرافي للسكان والأدفاق الهجرية في البلاد التونسية"
 const MAP_1_TITLE = "الخريطة 1: الكثافات السكانية والمدن بالبلاد التونسية"
-
-const LESSON_READ_ALOUD = `${UNIT_1_LESSON}. الكثافة السكانية هي عدد السكان في كل كيلومتر مربع. في تونس، الساحل والعاصمة أكثر كثافة، والجنوب أقل كثافة بسبب المناخ.`
 
 function legendIdFromDensity(d: GovernorateData["density"]): string {
   return { very_high: "very-high", high: "high", medium: "medium", low: "low" }[d]
@@ -35,7 +29,15 @@ const legendItems = [
   { id: "high", label: "كثافة مرتفعة", description: "بين 100 و 500 ن/كم²", color: "#16a34a", icon: Users },
   { id: "medium", label: "كثافة ضعيفة", description: "بين 40 و 100 ن/كم²", color: "#eab308", icon: MapPin },
   { id: "low", label: "كثافة ضعيفة جداً", description: "أقل من 40 ن/كم²", color: "#f97316", icon: Sparkles },
-]
+] as const
+
+/** 1 = المكتظة جداً، 2 = المرتفعة، 3 = الضعيفة، 4 = الضعيفة جداً — ملفات `/music/1.mp3` … `4.mp3` */
+const DENSITY_LEGEND_SOUND = {
+  "very-high": 1,
+  high: 2,
+  medium: 3,
+  low: 4,
+} as const satisfies Record<(typeof legendItems)[number]["id"], 1 | 2 | 3 | 4>
 
 const densityData: Record<string, {
   name: string
@@ -101,12 +103,8 @@ export default function Unit1Map1Page() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [selectedGovId, setSelectedGovId] = useState<string | null>(null)
   const [hoveredGovId, setHoveredGovId] = useState<string | null>(null)
-  const [isSoundEnabled, setIsSoundEnabled] = useState(true)
-  const { isMusicOn, toggleMusic: toggleSiteMusic } = useBackgroundMusicToggle()
 
-  const { progressByUnit, score, unlockedBadges, registerMapInteraction, bumpProgress } = useGamification()
-  const progress = progressByUnit[1] ?? 0
-  const badges = unlockedBadges
+  const { registerMapInteraction, bumpProgress } = useGamification()
 
   const selectedGov = useMemo(
     () => (selectedGovId ? governorates.find((g) => g.id === selectedGovId) : undefined),
@@ -119,98 +117,63 @@ export default function Unit1Map1Page() {
   }, [])
 
   const playSound = (type: "click" | "pop" | "success" | "magic") => {
-    if (!isSoundEnabled) return
     playSoundSimple(type, 0.3)
   }
 
-  const handleLegendClick = (id: string) => {
-    playSound("pop")
+  const handleLegendClick = (id: (typeof legendItems)[number]["id"]) => {
+    const closing = activeCategory === id
     setSelectedGovId(null)
-    setActiveCategory(activeCategory === id ? null : id)
-  }
-
-  const toggleMusic = () => {
-    toggleSiteMusic()
-    playSound("click")
+    setActiveCategory(closing ? null : id)
+    if (closing) {
+      playSound("pop")
+    } else {
+      playDensityLegendSound(DENSITY_LEGEND_SOUND[id])
+    }
   }
 
   const selectedDensity = activeCategory && !selectedGov ? densityData[activeCategory] : null
-  const rec = getRecommendedNextStep(1, 1)
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-red-50 via-green-50 to-amber-50">
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-md">
-        <div className="border-b-4 border-red-200">
-          <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-            <Link href="/">
-              <Button variant="ghost" className="text-foreground hover:text-red-600 hover:bg-red-50 rounded-xl">
-                <ArrowRight className="w-5 h-5 ml-2" />
-                العودة للرئيسية
-              </Button>
-            </Link>
-            
-            <h1 className="text-base md:text-lg font-bold text-foreground flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-center sm:text-right">
-              <div className="hidden sm:flex items-center gap-2 bg-red-100 px-3 py-1 rounded-full">
-                <Users className="w-5 h-5 text-red-600 shrink-0" />
-                <span>الوحدة الأولى</span>
-              </div>
-              <span className="text-red-600 leading-snug">البلاد التونسية: السكان</span>
-            </h1>
-            
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setIsSoundEnabled(!isSoundEnabled)
-                  playSound("click")
-                }}
-                className="rounded-full"
-                title={isSoundEnabled ? "إيقاف المؤثرات الصوتية" : "تشغيل المؤثرات الصوتية"}
-              >
-                {isSoundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleMusic}
-                className="rounded-full"
-                title={isMusicOn ? "إيقاف الموسيقى" : "تشغيل الموسيقى"}
-              >
-                {isMusicOn ? <Music className="w-5 h-5 text-primary" /> : <MicOff className="w-5 h-5" />}
-              </Button>
-              <div className="w-12 h-12">
-                <ExplorerCharacter size="sm" />
+      <header className="sticky top-0 z-50 shadow-md">
+        <div className="border-b-4 border-red-200 bg-white/95 backdrop-blur-sm">
+          <div className="container mx-auto px-2 pb-2 sm:px-4 sm:pb-2.5">
+            <div className="flex h-12 items-center justify-between gap-2 sm:h-14">
+              <Link href="/">
+                <Button variant="ghost" className="h-9 shrink-0 rounded-xl px-2 text-foreground hover:bg-red-50 hover:text-red-600 sm:px-3">
+                  <ArrowRight className="ml-1 h-4 w-4 sm:ml-2 sm:h-5 sm:w-5" />
+                  <span className="max-w-[5.5rem] truncate text-[11px] sm:max-w-none sm:text-sm">العودة للرئيسية</span>
+                </Button>
+              </Link>
+
+              <h1 className="flex min-w-0 flex-1 flex-col items-center gap-0.5 text-center sm:flex-row sm:items-center sm:justify-center sm:gap-2 sm:text-right">
+                <span className="hidden items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-800 sm:inline-flex sm:text-xs">
+                  <Users className="h-3.5 w-3.5 shrink-0 text-red-600 sm:h-4 sm:w-4" />
+                  الوحدة الأولى
+                </span>
+                <span className="truncate text-xs font-bold leading-tight text-red-600 sm:text-sm md:max-w-[min(100%,28rem)]">
+                  البلاد التونسية: السكان
+                </span>
+              </h1>
+
+              <div className="flex shrink-0 items-center">
+                <div className="h-10 w-10 sm:h-11 sm:w-11">
+                  <ExplorerCharacter size="sm" />
+                </div>
               </div>
             </div>
+            <UnitMapNav
+              unit={1}
+              mapIndex={1}
+              totalMaps={2}
+              lessonTitle={UNIT_1_LESSON}
+              mapTitle={MAP_1_TITLE}
+              theme="red"
+            />
           </div>
         </div>
-        <UnitMapNav
-          unit={1}
-          mapIndex={1}
-          totalMaps={2}
-          lessonTitle={UNIT_1_LESSON}
-          mapTitle={MAP_1_TITLE}
-          theme="red"
-        />
       </header>
 
       <main className="container mx-auto px-4 py-6">
-        <div className="mb-6 space-y-3 rounded-2xl border border-red-200 bg-white/80 p-4 shadow-sm transition-opacity duration-300">
-          <UnitProgressBar unit={1} progress={progress} label="تقدّمك في هذه الوحدة" accentClass="bg-red-600" />
-          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-            <span>النقاط: {score}</span>
-            {badges.length > 0 && <span>شارات: {badges.length}</span>}
-          </div>
-          <AudioPlayer lessonText={LESSON_READ_ALOUD} />
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            <strong>اقتراح:</strong> {rec.messageAr}{" "}
-            <Link href={rec.href} className="text-red-700 underline font-medium">
-              انتقل
-            </Link>
-          </p>
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           <aside className="lg:col-span-3 order-2 lg:order-1 space-y-4">
@@ -277,10 +240,10 @@ export default function Unit1Map1Page() {
             <InteractiveTunisiaMap
               title={MAP_1_TITLE}
               mapMode="density"
-              showCategoryCounts
               activeLegendCategory={activeCategory}
               selectedGovernorateId={selectedGovId}
               hoveredGovernorateId={hoveredGovId}
+              onDensityLegendSelect={(id) => handleLegendClick(id)}
               onSelectGovernorate={(id) => {
                 playSound("pop")
                 const g = governorates.find((x) => x.id === id)

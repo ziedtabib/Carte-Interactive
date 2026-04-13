@@ -1,18 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 import { ArrowRight, HelpCircle, BookOpen, Cloud, Sun, Droplets, Volume2, VolumeX, Sparkles, Music, MicOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ExplorerCharacter } from "@/components/explorer-character"
 import { SpeechBubble } from "@/components/speech-bubble"
 import { QuizDialog } from "@/components/quiz-dialog"
-import { InteractiveMapImage } from "@/components/interactive-map-image"
+import { InteractiveTunisiaMap } from "@/components/maps/InteractiveTunisiaMap"
 import { ChapterChatbot } from "@/components/chapter-chatbot"
 import { UnitMapNav } from "@/components/unit-map-nav"
 import { cn } from "@/lib/utils"
 import { playSoundSimple } from "@/lib/sounds"
 import { useBackgroundMusicToggle } from "@/hooks/useBackgroundMusicToggle"
+import { governorates } from "@/lib/tunisia-geojson"
 
 const UNIT_2_LESSON_1 = "الدرس 1: ظروف النشاط الفلاحي الطبيعية والبشرية"
 const UNIT_2_MAP_CLIMATE = "الخريطة: المناخات بالبلاد التونسية"
@@ -81,6 +82,8 @@ const quizQuestions = [
 
 export default function Unit2Map1Page() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [selectedGovId, setSelectedGovId] = useState<string | null>(null)
+  const [hoveredGovId, setHoveredGovId] = useState<string | null>(null)
   const [isSoundEnabled, setIsSoundEnabled] = useState(true)
   const { isMusicOn, toggleMusic: toggleSiteMusic } = useBackgroundMusicToggle()
 
@@ -91,6 +94,7 @@ export default function Unit2Map1Page() {
 
   const handleLegendClick = (id: string) => {
     playSound("pop")
+    setSelectedGovId(null)
     setActiveCategory(activeCategory === id ? null : id)
   }
 
@@ -99,65 +103,88 @@ export default function Unit2Map1Page() {
     playSound("click")
   }
 
-  const selectedClimate = activeCategory ? climateData[activeCategory] : null
+  const selectedGov = useMemo(
+    () => (selectedGovId ? governorates.find((g) => g.id === selectedGovId) : undefined),
+    [selectedGovId]
+  )
+
+  const selectedClimate = useMemo(() => {
+    if (selectedGov) {
+      const climateId = selectedGov.climate === "semi_arid" ? "semi-arid" : selectedGov.climate
+      return climateData[climateId]
+    }
+    if (activeCategory) return climateData[activeCategory]
+    return null
+  }, [activeCategory, selectedGov])
   const SelectedIcon = selectedClimate?.icon || Sparkles
+
+  const handleGovernorateSelect = (id: string) => {
+    const gov = governorates.find((g) => g.id === id)
+    if (!gov) return
+    setSelectedGovId(id)
+    const climateId = gov.climate === "semi_arid" ? "semi-arid" : gov.climate
+    setActiveCategory(climateId)
+    playSound("pop")
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-50 via-cyan-50 to-amber-50">
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-md">
-        <div className="border-b-4 border-purple-200">
-          <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-            <Link href="/">
-              <Button variant="ghost" className="text-foreground hover:text-purple-600 hover:bg-purple-50 rounded-xl">
-                <ArrowRight className="w-5 h-5 ml-2" />
-                العودة للرئيسية
-              </Button>
-            </Link>
-            
-            <h1 className="text-base md:text-lg font-bold text-foreground flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-center sm:text-right">
-              <div className="hidden sm:flex items-center gap-2 bg-purple-100 px-3 py-1 rounded-full">
-                <Cloud className="w-5 h-5 text-purple-600 shrink-0" />
-                <span>الوحدة الثانية</span>
-              </div>
-              <span className="text-purple-600 leading-snug">الفلاحة والصيد البحري في البلاد التونسية</span>
-            </h1>
-            
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setIsSoundEnabled(!isSoundEnabled)
-                  playSound("click")
-                }}
-                className="rounded-full"
-                title={isSoundEnabled ? "إيقاف المؤثرات الصوتية" : "تشغيل المؤثرات الصوتية"}
-              >
-                {isSoundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleMusic}
-                className="rounded-full"
-                title={isMusicOn ? "إيقاف الموسيقى" : "تشغيل الموسيقى"}
-              >
-                {isMusicOn ? <Music className="w-5 h-5 text-primary" /> : <MicOff className="w-5 h-5" />}
-              </Button>
-              <div className="w-12 h-12">
-                <ExplorerCharacter size="sm" />
+      <header className="sticky top-0 z-50 shadow-md">
+        <div className="border-b-4 border-purple-200 bg-white/95 backdrop-blur-sm">
+          <div className="container mx-auto px-4 pb-2">
+            <div className="flex h-16 items-center justify-between">
+              <Link href="/">
+                <Button variant="ghost" className="text-foreground hover:bg-purple-50 hover:text-purple-600 rounded-xl">
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                  العودة للرئيسية
+                </Button>
+              </Link>
+
+              <h1 className="flex flex-1 flex-col items-center gap-1 text-center text-base font-bold text-foreground sm:flex-row sm:items-center sm:justify-center sm:gap-3 sm:text-right md:text-lg">
+                <div className="hidden items-center gap-2 rounded-full bg-purple-100 px-3 py-1 sm:flex">
+                  <Cloud className="h-5 w-5 shrink-0 text-purple-600" />
+                  <span>الوحدة الثانية</span>
+                </div>
+                <span className="leading-snug text-purple-600">الفلاحة والصيد البحري في البلاد التونسية</span>
+              </h1>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setIsSoundEnabled(!isSoundEnabled)
+                    playSound("click")
+                  }}
+                  className="rounded-full"
+                  title={isSoundEnabled ? "إيقاف المؤثرات الصوتية" : "تشغيل المؤثرات الصوتية"}
+                >
+                  {isSoundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleMusic}
+                  className="rounded-full"
+                  title={isMusicOn ? "إيقاف الموسيقى" : "تشغيل الموسيقى"}
+                >
+                  {isMusicOn ? <Music className="h-5 w-5 text-primary" /> : <MicOff className="h-5 w-5" />}
+                </Button>
+                <div className="h-12 w-12">
+                  <ExplorerCharacter size="sm" />
+                </div>
               </div>
             </div>
+            <UnitMapNav
+              unit={2}
+              mapIndex={1}
+              totalMaps={2}
+              lessonTitle={UNIT_2_LESSON_1}
+              mapTitle={UNIT_2_MAP_CLIMATE}
+              theme="purple"
+            />
           </div>
         </div>
-        <UnitMapNav
-          unit={2}
-          mapIndex={1}
-          totalMaps={2}
-          lessonTitle={UNIT_2_LESSON_1}
-          mapTitle={UNIT_2_MAP_CLIMATE}
-          theme="purple"
-        />
       </header>
 
       <main className="container mx-auto px-4 py-6">
@@ -217,11 +244,14 @@ export default function Unit2Map1Page() {
 
           <div className="lg:col-span-5 order-1 lg:order-2">
             <div className="bg-white rounded-3xl p-4 shadow-xl border-2 border-purple-200 overflow-hidden">
-              <InteractiveMapImage
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Capture%20d%27%C3%A9cran%202026-03-03%20151146-twyQ9soxtdaWcRLsR1psRbeKwTsoLb.png"
-                alt="خريطة المناخات بالبلاد التونسية"
+              <InteractiveTunisiaMap
                 title={UNIT_2_MAP_CLIMATE}
-                highlightColor={activeCategory ? legendItems.find(l => l.id === activeCategory)?.color : undefined}
+                mapMode="climate"
+                activeLegendCategory={activeCategory}
+                selectedGovernorateId={selectedGovId}
+                hoveredGovernorateId={hoveredGovId}
+                onSelectGovernorate={handleGovernorateSelect}
+                onHoverGovernorate={setHoveredGovId}
               />
             </div>
 

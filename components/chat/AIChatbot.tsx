@@ -11,9 +11,10 @@ type UnitTheme = "red" | "purple" | "pink" | "green"
 type ChatBanner = null | "demo" | "live" | "quota" | "auth" | "api"
 
 function applyMetaToBanner(ev: { mock?: boolean; apiError?: string }): ChatBanner {
-  if (ev.apiError === "quota" || ev.apiError === "auth" || ev.apiError === "api") {
-    return ev.apiError
-  }
+  const err = ev.apiError
+  if (err === "quota") return "quota"
+  if (err === "auth") return "auth"
+  if (err === "network" || err === "api" || err === "invalid_response") return "api"
   if (ev.mock === true) return "demo"
   return "live"
 }
@@ -160,13 +161,7 @@ export function AIChatbot({ unitNumber, theme }: AIChatbotProps) {
         apiError?: string
       }
       const reply = typeof data.reply === "string" ? data.reply : "حدث خطأ، حاول لاحقاً."
-      if (data.apiError === "quota" || data.apiError === "auth" || data.apiError === "api") {
-        setBanner(data.apiError)
-      } else if (data.mock === true) {
-        setBanner("demo")
-      } else {
-        setBanner("live")
-      }
+      setBanner(applyMetaToBanner({ mock: data.mock, apiError: data.apiError }))
       setMessages([...nextMsgs, { role: "assistant", content: reply }])
     } catch {
       setBanner(null)
@@ -213,27 +208,27 @@ export function AIChatbot({ unitNumber, theme }: AIChatbotProps) {
             <h3 className={cn("font-bold text-lg leading-tight", th.headerText)}>مساعد الدرس الذكي</h3>
             {banner === "demo" && (
               <span className="text-[11px] text-muted-foreground font-normal mt-0.5">
-                وضع تجريبي — أضف OPENAI_API_KEY في .env.local لتفعيل الذكاء الاصطناعي
+                وضع تجريبي — أضف DEEPSEEK_API_KEY في .env.local لتفعيل الإجابات الحية (DeepSeek)
               </span>
             )}
             {banner === "live" && (
               <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-normal mt-0.5">
-                متصل بنموذج ذكاء اصطناعي
+                متصل بـ DeepSeek — إجابات مباشرة
               </span>
             )}
             {banner === "quota" && (
               <span className="text-[11px] text-amber-800 dark:text-amber-200 font-normal mt-0.5">
-                حصّة OpenAI منتهية — راجع الفوترة على platform.openai.com (Billing)
+                حدّ الاستخدام أو الرصيد منتهٍ — راجع حسابك على منصة DeepSeek
               </span>
             )}
             {banner === "auth" && (
               <span className="text-[11px] text-destructive font-normal mt-0.5">
-                مفتاح API غير صالح — تحقق من .env.local
+                مفتاح DEEPSEEK_API_KEY غير صالح أو مفقود — تحقق من .env.local
               </span>
             )}
             {banner === "api" && (
               <span className="text-[11px] text-destructive/90 font-normal mt-0.5">
-                خطأ من مزوّد الذكاء الاصطناعي — حاول لاحقاً
+                تعذّر الاتصال بالخادم أو استجابة غير صالحة — تحقق من الشبكة أو حاول لاحقاً
               </span>
             )}
           </div>
@@ -278,7 +273,12 @@ export function AIChatbot({ unitNumber, theme }: AIChatbotProps) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && send()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                void send()
+              }
+            }}
             placeholder="اكتب سؤالك هنا..."
             className="flex-1 rounded-xl border border-black/10 bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground"
             dir="rtl"

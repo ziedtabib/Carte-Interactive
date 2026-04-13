@@ -12,15 +12,16 @@ import { ChapterChatbot } from "@/components/chapter-chatbot"
 import { UnitMapNav } from "@/components/unit-map-nav"
 import { cn } from "@/lib/utils"
 import { playSoundSimple } from "@/lib/sounds"
+import { MIGRATION_LEGEND_COLORS } from "@/lib/tunisia-data"
 import { useBackgroundMusicToggle } from "@/hooks/useBackgroundMusicToggle"
 
 const UNIT_3_LESSON_1 = "الدرس 1: ظروف النشاط الصناعي: الموارد والظروف البشرية"
 const UNIT_3_MAP_RESOURCES = "الخريطة: الموارد الطاقية والمنجمية في البلاد التونسية"
 
 const legendItems = [
-  { id: "positive", label: "حصيلة هجرية إيجابية", description: "مناطق استقبال السكان", color: "#ec4899", icon: TrendingUp },
-  { id: "negative", label: "حصيلة هجرية سلبية", description: "مناطق تفقد السكان", color: "#0ea5e9", icon: TrendingDown },
-  { id: "flows", label: "الأدفاق الهجرية", description: "اتجاهات حركة السكان", color: "#1f2937", icon: MoveRight },
+  { id: "positive", label: "حصيلة هجرية إيجابية", description: "مناطق استقبال السكان", color: MIGRATION_LEGEND_COLORS.positive, icon: TrendingUp },
+  { id: "negative", label: "حصيلة هجرية سلبية", description: "مناطق تفقد السكان", color: MIGRATION_LEGEND_COLORS.negative, icon: TrendingDown },
+  { id: "flows", label: "الأدفاق الهجرية", description: "اتجاهات حركة السكان", color: MIGRATION_LEGEND_COLORS.flows, icon: MoveRight },
 ]
 
 const migrationData: Record<string, {
@@ -95,60 +96,62 @@ export default function Unit3Map1Page() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 via-sky-50 to-slate-50">
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm shadow-md">
-        <div className="border-b-4 border-pink-200">
-          <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-            <Link href="/">
-              <Button variant="ghost" className="text-foreground hover:text-pink-600 hover:bg-pink-50 rounded-xl">
-                <ArrowRight className="w-5 h-5 ml-2" />
-                العودة للرئيسية
-              </Button>
-            </Link>
-            
-            <h1 className="text-base md:text-lg font-bold text-foreground flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-center sm:text-right">
-              <div className="hidden sm:flex items-center gap-2 bg-pink-100 px-3 py-1 rounded-full">
-                <MoveRight className="w-5 h-5 text-pink-600 shrink-0" />
-                <span>الوحدة الثالثة</span>
-              </div>
-              <span className="text-pink-600 leading-snug">الصناعة بالبلاد التونسية</span>
-            </h1>
-            
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setIsSoundEnabled(!isSoundEnabled)
-                  playSound("click")
-                }}
-                className="rounded-full"
-                title={isSoundEnabled ? "إيقاف المؤثرات الصوتية" : "تشغيل المؤثرات الصوتية"}
-              >
-                {isSoundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleMusic}
-                className="rounded-full"
-                title={isMusicOn ? "إيقاف الموسيقى" : "تشغيل الموسيقى"}
-              >
-                {isMusicOn ? <Music className="w-5 h-5 text-primary" /> : <MicOff className="w-5 h-5" />}
-              </Button>
-              <div className="w-12 h-12">
-                <ExplorerCharacter size="sm" />
+      <header className="sticky top-0 z-50 shadow-md">
+        <div className="border-b-4 border-pink-200 bg-white/95 backdrop-blur-sm">
+          <div className="container mx-auto px-4 pb-2">
+            <div className="flex h-16 items-center justify-between">
+              <Link href="/">
+                <Button variant="ghost" className="text-foreground hover:bg-pink-50 hover:text-pink-600 rounded-xl">
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                  العودة للرئيسية
+                </Button>
+              </Link>
+
+              <h1 className="flex flex-1 flex-col items-center gap-1 text-center text-base font-bold text-foreground sm:flex-row sm:items-center sm:justify-center sm:gap-3 sm:text-right md:text-lg">
+                <div className="hidden items-center gap-2 rounded-full bg-pink-100 px-3 py-1 sm:flex">
+                  <MoveRight className="h-5 w-5 shrink-0 text-pink-600" />
+                  <span>الوحدة الثالثة</span>
+                </div>
+                <span className="leading-snug text-pink-600">الصناعة بالبلاد التونسية</span>
+              </h1>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setIsSoundEnabled(!isSoundEnabled)
+                    playSound("click")
+                  }}
+                  className="rounded-full"
+                  title={isSoundEnabled ? "إيقاف المؤثرات الصوتية" : "تشغيل المؤثرات الصوتية"}
+                >
+                  {isSoundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleMusic}
+                  className="rounded-full"
+                  title={isMusicOn ? "إيقاف الموسيقى" : "تشغيل الموسيقى"}
+                >
+                  {isMusicOn ? <Music className="h-5 w-5 text-primary" /> : <MicOff className="h-5 w-5" />}
+                </Button>
+                <div className="h-12 w-12">
+                  <ExplorerCharacter size="sm" />
+                </div>
               </div>
             </div>
+            <UnitMapNav
+              unit={3}
+              mapIndex={1}
+              totalMaps={2}
+              lessonTitle={UNIT_3_LESSON_1}
+              mapTitle={UNIT_3_MAP_RESOURCES}
+              theme="pink"
+            />
           </div>
         </div>
-        <UnitMapNav
-          unit={3}
-          mapIndex={1}
-          totalMaps={2}
-          lessonTitle={UNIT_3_LESSON_1}
-          mapTitle={UNIT_3_MAP_RESOURCES}
-          theme="pink"
-        />
       </header>
 
       <main className="container mx-auto px-4 py-6">

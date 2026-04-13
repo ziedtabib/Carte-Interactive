@@ -229,7 +229,7 @@ export const governorates: GovernorateData[] = [
     population: 479520,
     density: "low",
     climate: "arid",
-    migration: "negative",
+    migration: "positive",
     agriculture: ["زيتون", "رعي"]
   },
   {
@@ -262,7 +262,7 @@ export const governorates: GovernorateData[] = [
     population: 107912,
     density: "low",
     climate: "arid",
-    migration: "negative",
+    migration: "positive",
     agriculture: ["نخيل", "واحات", "تمور"]
   },
   {
@@ -273,7 +273,7 @@ export const governorates: GovernorateData[] = [
     population: 156961,
     density: "low",
     climate: "arid",
-    migration: "negative",
+    migration: "positive",
     agriculture: ["نخيل", "تمور"]
   }
 ]

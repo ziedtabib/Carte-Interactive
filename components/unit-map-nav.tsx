@@ -6,11 +6,12 @@ import { cn } from "@/lib/utils"
 
 export type UnitNavTheme = "red" | "purple" | "pink" | "green"
 
-const themeBar: Record<UnitNavTheme, string> = {
-  red: "border-red-200/90 bg-red-50/90",
-  purple: "border-purple-200/90 bg-purple-50/90",
-  pink: "border-pink-200/90 bg-pink-50/90",
-  green: "border-green-200/90 bg-green-50/90",
+/** Séparateur léger sous la barre d’outils (un seul header visuel) */
+const themeDivider: Record<UnitNavTheme, string> = {
+  red: "border-red-100",
+  purple: "border-purple-100",
+  pink: "border-pink-100",
+  green: "border-green-100",
 }
 
 const themeMuted: Record<UnitNavTheme, string> = {
@@ -35,53 +36,74 @@ export function UnitMapNav({ unit, mapIndex, totalMaps, lessonTitle, mapTitle, t
   const nextUnitHref = mapIndex === totalMaps && unit < 4 ? `/unit/${unit + 1}/1` : null
 
   return (
-    <div
-      className={cn(
-        "border-t backdrop-blur-sm",
-        themeBar[theme]
-      )}
-    >
-      <div className="container mx-auto px-3 sm:px-4 py-3">
-        <p className={cn("text-center text-xs sm:text-sm font-medium leading-snug px-1", themeMuted[theme])}>
-          {lessonTitle}
-        </p>
-        <p className="text-center text-sm sm:text-base font-bold text-foreground leading-snug mt-1 mb-3 px-1">
-          {mapTitle}
-        </p>
-        <nav
-          className="flex flex-wrap items-center justify-center gap-2 sm:gap-3"
-          aria-label="تنقّل بين الخرائط"
-        >
-          {prevHref ? (
-            <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground hover:text-foreground" asChild>
-              <Link href={prevHref}>← السابق</Link>
-            </Button>
-          ) : (
-            <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground/50" disabled>
-              ← السابق
-            </Button>
-          )}
-          <Button
-            size="sm"
-            className="rounded-full min-w-[7rem] bg-amber-400 text-black shadow-sm hover:bg-amber-500 font-semibold"
-            asChild
+    <div className={cn("mt-1 border-t pt-2 sm:mt-1.5 sm:pt-2.5", themeDivider[theme])}>
+      <div className="flex flex-col gap-1.5 md:flex-row md:items-center md:justify-between md:gap-3">
+          <div className="min-w-0 flex-1 text-center md:text-right">
+            <p
+              className={cn(
+                "text-[11px] font-medium leading-snug sm:text-xs md:line-clamp-1",
+                themeMuted[theme]
+              )}
+              title={lessonTitle}
+            >
+              {lessonTitle}
+            </p>
+            <p
+              className="mt-0.5 text-xs font-bold text-foreground leading-snug sm:text-sm md:line-clamp-1"
+              title={mapTitle}
+            >
+              {mapTitle}
+            </p>
+          </div>
+          <nav
+            className="flex shrink-0 flex-wrap items-center justify-center gap-1 md:justify-end"
+            aria-label="تنقّل بين الخرائط"
           >
-            <Link href="/">الرئيسية</Link>
-          </Button>
-          {nextHref ? (
-            <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground hover:text-foreground" asChild>
-              <Link href={nextHref}>التالي →</Link>
+            {prevHref ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 rounded-full px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                asChild
+              >
+                <Link href={prevHref}>← السابق</Link>
+              </Button>
+            ) : (
+              <Button variant="ghost" size="sm" className="h-8 rounded-full px-2.5 text-xs text-muted-foreground/50" disabled>
+                ← السابق
+              </Button>
+            )}
+            <Button
+              size="sm"
+              className="h-8 min-w-[5.5rem] rounded-full bg-amber-400 px-3 text-xs font-semibold text-black shadow-sm hover:bg-amber-500"
+              asChild
+            >
+              <Link href="/">الرئيسية</Link>
             </Button>
-          ) : nextUnitHref ? (
-            <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground hover:text-foreground" asChild>
-              <Link href={nextUnitHref}>الوحدة التالية →</Link>
-            </Button>
-          ) : (
-            <Button variant="ghost" size="sm" className="rounded-full text-muted-foreground/50" disabled>
-              التالي →
-            </Button>
-          )}
-        </nav>
+            {nextHref ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 rounded-full px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                asChild
+              >
+                <Link href={nextHref}>التالي →</Link>
+              </Button>
+            ) : nextUnitHref ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 rounded-full px-2.5 text-xs text-muted-foreground hover:text-foreground"
+                asChild
+              >
+                <Link href={nextUnitHref}>الوحدة التالية →</Link>
+              </Button>
+            ) : (
+              <Button variant="ghost" size="sm" className="h-8 rounded-full px-2.5 text-xs text-muted-foreground/50" disabled>
+                التالي →
+              </Button>
+            )}
+          </nav>
       </div>
     </div>
   )

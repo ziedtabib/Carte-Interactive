@@ -1,120 +1,158 @@
 import { NextResponse } from "next/server"
-import { systemPromptForUnit } from "@/lib/chat-prompts"
+import { getSystemPrompt } from "@/lib/chat-prompts"
+import { smartResponse } from "@/lib/smart-chatbot"
 
 export const runtime = "nodejs"
 
 const NDJSON = "application/x-ndjson; charset=utf-8"
+const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
+const REQUEST_TIMEOUT_MS = 4500
 
 type ChatMessage = { role: "user" | "assistant"; content: string }
+type ApiErrorKind = "auth" | "quota" | "network" | "invalid_response" | "api"
 
-type ApiErrorKind = "quota" | "auth" | "api"
+type ChatResult = {
+  message: string
+  mock: boolean
+  apiError: ApiErrorKind | null
+}
 
-function classifyOpenAiFailure(status: number, errBody: string): ApiErrorKind {
-  let code: string | undefined
-  try {
-    code = (JSON.parse(errBody) as { error?: { code?: string } })?.error?.code
-  } catch {
-    /* ignore */
+type InputMessage = {
+  role?: string
+  content?: string
+  parts?: Array<{ type?: string; text?: string }>
+}
+
+function parseUnit(raw: unknown): 1 | 2 | 3 | 4 | null {
+  const n = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : NaN
+  if (!Number.isInteger(n) || n < 1 || n > 4) return null
+  return n as 1 | 2 | 3 | 4
+}
+
+function normalizeMessages(input: unknown): ChatMessage[] {
+  if (!Array.isArray(input)) return []
+  const out: ChatMessage[] = []
+  for (const m of input as InputMessage[]) {
+    const role = m?.role === "assistant" ? "assistant" : "user"
+    const content =
+      typeof m?.content === "string"
+        ? m.content
+        : Array.isArray(m?.parts)
+          ? m.parts
+              .filter((p) => p?.type === "text" && typeof p?.text === "string")
+              .map((p) => p.text as string)
+              .join("\n")
+          : ""
+    if (content.trim()) out.push({ role, content: content.trim() })
   }
-  if (status === 429 || code === "insufficient_quota") return "quota"
-  if (status === 401 || code === "invalid_api_key") return "auth"
+  return out
+}
+
+function classifyDeepSeekFailure(status: number, bodyText: string): ApiErrorKind {
+  const low = bodyText.toLowerCase()
+  if (status === 401 || status === 403 || low.includes("api key")) return "auth"
+  if (status === 429 || low.includes("quota") || low.includes("rate limit")) return "quota"
   return "api"
 }
 
-/** Message utilisateur (arabe) quand l’API OpenAI refuse la requête */
-function openAiFailureUserMessage(status: number, errBody: string): string {
-  const kind = classifyOpenAiFailure(status, errBody)
-  if (kind === "quota") {
-    return "لا يمكنني الاتصال بالذكاء الاصطناعي: حساب OpenAI تجاوز الحصة أو لم يُفعّل الدفع. ادخل إلى platform.openai.com ثم قسم Billing (الفوترة) لإضافة رصيد أو تفعيل الاشتراك، ثم أعد المحاولة."
+async function callDeepSeek(
+  messages: ChatMessage[],
+  unit: 1 | 2 | 3 | 4,
+  stream: boolean
+): Promise<Response> {
+  const apiKey = process.env.DEEPSEEK_API_KEY
+  if (!apiKey) {
+    throw new Error("missing_api_key")
   }
-  if (kind === "auth") {
-    return "مفتاح API غير صالح. تحقّق من OPENAI_API_KEY في ملف .env.local ثم أعد تشغيل الخادم (npm run dev)."
-  }
-  return "تعذّر الحصول على إجابة من مزوّد الذكاء الاصطناعي. تحقّق من الشبكة أو من OPENAI_MODEL و OPENAI_BASE_URL."
-}
 
-export async function POST(req: Request) {
-  let wantStream = false
+  const payload = {
+    model: process.env.DEEPSEEK_MODEL ?? "deepseek-chat",
+    temperature: 0.7,
+    stream,
+    messages: [{ role: "system", content: getSystemPrompt(unit) }, ...messages],
+  }
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
   try {
-    const body = await req.json()
-    wantStream = body.stream === true
-    const messages = body.messages as ChatMessage[]
-    const unit = body.unit as 1 | 2 | 3 | 4
-
-    if (!Array.isArray(messages) || !unit || unit < 1 || unit > 4) {
-      return NextResponse.json({ error: "Invalid payload" }, { status: 400 })
-    }
-
-    const apiKey = process.env.OPENAI_API_KEY
-    const baseUrl = (process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1").replace(/\/$/, "")
-
-    if (!apiKey) {
-      const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content ?? ""
-      const reply = mockReply(unit, lastUser)
-      if (wantStream) {
-        return ndjsonStream([
-          { type: "meta" as const, mock: true },
-          { type: "token" as const, text: reply },
-          { type: "done" as const },
-        ])
-      }
-      return NextResponse.json({ reply, mock: true })
-    }
-
-    const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini"
-    const openaiPayload = {
-      model,
-      messages: [{ role: "system" as const, content: systemPromptForUnit(unit) }, ...messages],
-      temperature: 0.6,
-      max_tokens: 900,
-      stream: wantStream,
-    }
-
-    const res = await fetch(`${baseUrl}/chat/completions`, {
+    return await fetch(DEEPSEEK_URL, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(openaiPayload),
+      body: JSON.stringify(payload),
+      signal: controller.signal,
     })
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+function asFallback(messages: ChatMessage[], unit: 1 | 2 | 3 | 4, apiError: ApiErrorKind | null): ChatResult {
+  const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content ?? ""
+  const message = smartResponse(lastUser, unit)
+  return { message, mock: true, apiError }
+}
+
+export async function POST(req: Request) {
+  let wantStream = false
+  let unit: 1 | 2 | 3 | 4 = 1
+  let messages: ChatMessage[] = []
+
+  try {
+    const body = await req.json()
+    wantStream = body.stream === true
+    const parsedUnit = parseUnit(body.unit)
+    if (parsedUnit === null) {
+      return NextResponse.json({ error: "Invalid payload" }, { status: 400 })
+    }
+    unit = parsedUnit
+    messages = normalizeMessages(body.messages)
+
+    if (!Array.isArray(body.messages)) {
+      return NextResponse.json({ error: "Invalid payload" }, { status: 400 })
+    }
+
+    let res: Response
+    try {
+      res = await callDeepSeek(messages, unit, wantStream)
+    } catch (e) {
+      const apiError = e instanceof Error && e.message === "missing_api_key" ? "auth" : "network"
+      const fallback = asFallback(messages, unit, apiError)
+      if (wantStream) {
+        return ndjsonFromResult(fallback)
+      }
+      return NextResponse.json({ message: fallback.message, reply: fallback.message, mock: true, apiError })
+    }
 
     if (!res.ok) {
       const errText = await res.text()
-      console.error("Chat API error:", res.status, errText)
-      const apiError = classifyOpenAiFailure(res.status, errText)
-      const reply = openAiFailureUserMessage(res.status, errText)
+      const apiError = classifyDeepSeekFailure(res.status, errText)
+      const fallback = asFallback(messages, unit, apiError)
       if (wantStream) {
-        return ndjsonStream([
-          { type: "meta" as const, mock: false, apiError },
-          { type: "token" as const, text: reply },
-          { type: "done" as const },
-        ])
+        return ndjsonFromResult(fallback)
       }
-      return NextResponse.json({ reply, mock: false, apiError })
+      return NextResponse.json({ message: fallback.message, reply: fallback.message, mock: true, apiError })
     }
 
     if (wantStream && res.body) {
-      return streamOpenAIToNdjson(res.body)
+      return streamDeepSeekToNdjson(res.body)
     }
 
     const data = (await res.json()) as {
       choices?: Array<{ message?: { content?: string | null } }>
     }
-    const reply =
-      data.choices?.[0]?.message?.content?.trim() ?? "عذراً، لم أتمكن من الإجابة."
-    return NextResponse.json({ reply, mock: false })
-  } catch (e) {
-    console.error(e)
-    const reply = mockReply(1, "")
-    if (wantStream) {
-      return ndjsonStream([
-        { type: "meta", mock: true },
-        { type: "token", text: reply },
-        { type: "done" },
-      ])
+    const message = data.choices?.[0]?.message?.content?.trim()
+    if (!message) {
+      const fallback = asFallback(messages, unit, "invalid_response")
+      return NextResponse.json({ message: fallback.message, reply: fallback.message, mock: true, apiError: "invalid_response" })
     }
-    return NextResponse.json({ error: "Chat failed", reply, mock: true }, { status: 200 })
+    return NextResponse.json({ message, reply: message, mock: false, apiError: null })
+  } catch {
+    const fallback = asFallback(messages, unit, "api")
+    if (wantStream) return ndjsonFromResult(fallback)
+    return NextResponse.json({ message: fallback.message, reply: fallback.message, mock: true, apiError: "api" }, { status: 200 })
   }
 }
 
@@ -142,10 +180,18 @@ function ndjsonStream(
   })
 }
 
-function streamOpenAIToNdjson(openaiBody: ReadableStream<Uint8Array>) {
+function ndjsonFromResult(result: ChatResult) {
+  return ndjsonStream([
+    { type: "meta", mock: result.mock, apiError: result.apiError ?? undefined },
+    { type: "token", text: result.message },
+    { type: "done" },
+  ])
+}
+
+function streamDeepSeekToNdjson(sseBody: ReadableStream<Uint8Array>) {
   const enc = encoder()
   const dec = new TextDecoder()
-  const reader = openaiBody.getReader()
+  const reader = sseBody.getReader()
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -159,10 +205,10 @@ function streamOpenAIToNdjson(openaiBody: ReadableStream<Uint8Array>) {
           const lines = buffer.split("\n")
           buffer = lines.pop() ?? ""
           for (const line of lines) {
-            emitOpenAIChunkLine(line, controller, enc)
+            emitDeepSeekChunkLine(line, controller, enc)
           }
         }
-        if (buffer.trim()) emitOpenAIChunkLine(buffer, controller, enc)
+        if (buffer.trim()) emitDeepSeekChunkLine(buffer, controller, enc)
       } finally {
         reader.releaseLock()
       }
@@ -179,7 +225,7 @@ function streamOpenAIToNdjson(openaiBody: ReadableStream<Uint8Array>) {
   })
 }
 
-function emitOpenAIChunkLine(
+function emitDeepSeekChunkLine(
   line: string,
   controller: ReadableStreamDefaultController,
   enc: TextEncoder
@@ -199,20 +245,4 @@ function emitOpenAIChunkLine(
   } catch {
     /* skip malformed chunks */
   }
-}
-
-/** Fallback when no API key or error — still educational Arabic content. */
-function mockReply(unit: 1 | 2 | 3 | 4, userText: string): string {
-  const t = userText.trim()
-  if (!t) return "مرحباً! اكتب سؤالك عن الدرس وسأساعدك بشرح مبسط."
-
-  const hints: Record<1 | 2 | 3 | 4, string> = {
-    1: "تذكّر: الكثافة السكانية تعني عدد السكان في كل كم². في تونس، الساحل والعاصمة أكثر كثافة من الجنوب. هل تريد أن أشرح الفرق بين الهجرة الداخلية والخارجية؟",
-    2: "المناخ في تونس يتنوع: رطب في الشمال، شبه جاف في الوسط، وجاف في الجنوب. الأمطار تقلّ عادةً من الشمال نحو الجنوب. ما الذي تريد معرفته عن المحاصيل؟",
-    3: "الصناعة تحتاج موارد وبشراً ونقلاً. الخرائط تساعدنا على فهم أين تتركز المصانع. هل سؤالك عن الطاقة أم عن التوزع الجغرافي؟",
-    4: "السياحة مرتبطة بالسواحل والمناخ والمواقع. تونس معروفة بشواطئها وتراثها. ما الوجهة التي تودّ معرفة المزيد عنها؟",
-  }
-
-  if (t.length < 3) return hints[unit]
-  return `${hints[unit]}\n\n(لتفعيل الذكاء الاصطناعي الحقيقي: أنشئ ملف .env.local في المشروع وأضف OPENAI_API_KEY=sk-... ثم أعد تشغيل الخادم.)`
 }

@@ -67,17 +67,66 @@ export function playSoundSimple(type: SoundType, volume: number = 0.5): void {
   }
 }
 
+/** Sons du مفتاح الخريطة (الكثافة) — `public/music/1.mp3` … `4.mp3` */
+export type DensityLegendSoundIndex = 1 | 2 | 3 | 4
+
+export function playDensityLegendSound(index: DensityLegendSoundIndex, volume = 0.42): void {
+  try {
+    const audio = new Audio(`/music/${index}.mp3`)
+    audio.volume = volume
+    void audio.play().catch(() => {})
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Sons du مفتاح الخريطة (الهجرة) — `public/music/11.mp3` … `13.mp3` */
+export type MigrationLegendSoundIndex = 11 | 12 | 13
+
+export function playMigrationLegendSound(index: MigrationLegendSoundIndex, volume = 0.42): void {
+  try {
+    const audio = new Audio(`/music/${index}.mp3`)
+    audio.volume = volume
+    void audio.play().catch(() => {})
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Fichier dans `public/music/` — encodé pour les caractères spéciaux dans l’URL */
 export const BACKGROUND_MUSIC_SRC =
   "/music/" + encodeURIComponent("[Dora ]أهلاً......ited].mp3")
 
+/** Musique d’ambiance pour l’unité 1 (`public/music/unit1.mp3`) */
+export const UNIT_1_BACKGROUND_MUSIC_SRC = "/music/unit1.mp3"
+
 // Background music controller
 let bgMusic: HTMLAudioElement | null = null
+/** Piste courante (chemin relatif, ex. `/music/...`) — utilisée à la création de l’élément Audio */
+let bgMusicSrc: string = BACKGROUND_MUSIC_SRC
+let bgMusicLoop = false
+
+function resolveSrcUrl(src: string): string {
+  if (typeof window === "undefined") return src
+  try {
+    return new URL(src, window.location.origin).href
+  } catch {
+    return src
+  }
+}
+
+function sameResolvedSrc(audio: HTMLAudioElement, src: string): boolean {
+  try {
+    return audio.src === resolveSrcUrl(src)
+  } catch {
+    return false
+  }
+}
 
 function ensureBgMusic(): HTMLAudioElement {
   if (!bgMusic) {
-    bgMusic = new Audio(BACKGROUND_MUSIC_SRC)
-    bgMusic.loop = false
+    bgMusic = new Audio(bgMusicSrc)
+    bgMusic.loop = bgMusicLoop
     bgMusic.volume = 0.28
     const emit = () => {
       window.dispatchEvent(
@@ -91,6 +140,38 @@ function ensureBgMusic(): HTMLAudioElement {
     })
   }
   return bgMusic
+}
+
+/** Piste actuellement configurée (avant tout changement depuis le layout d’une unité, etc.) */
+export function getBackgroundMusicSrc(): string {
+  return bgMusicSrc
+}
+
+export function getBackgroundMusicLoop(): boolean {
+  return bgMusicLoop
+}
+
+/**
+ * Change la piste de musique de fond (même lecteur que le site).
+ * Si la lecture était en cours, elle reprend sur la nouvelle piste depuis le début.
+ */
+export function setBackgroundMusicSrc(src: string): void {
+  if (typeof window === "undefined") return
+  bgMusicSrc = src
+  const audio = ensureBgMusic()
+  if (sameResolvedSrc(audio, src)) return
+  const wasPlaying = !audio.paused
+  audio.pause()
+  audio.src = src
+  audio.loop = bgMusicLoop
+  audio.currentTime = 0
+  audio.load()
+  if (wasPlaying) void audio.play().catch(() => {})
+}
+
+export function setBackgroundMusicLoop(loop: boolean): void {
+  bgMusicLoop = loop
+  if (bgMusic) bgMusic.loop = loop
 }
 
 export function toggleBackgroundMusic(play: boolean): void {

@@ -29,6 +29,13 @@ export const DENSITY_LEGEND_LABELS_AR: Record<DensityLegendCategoryId, string> =
   low: "كثافة ضعيفة جداً",
 }
 
+/** Couleurs mode هجرة — alignées sur `InteractiveTunisiaMap` (rose = استقبال، أزرق = طرد). */
+export const MIGRATION_LEGEND_COLORS = {
+  positive: "#ec4899",
+  negative: "#0ea5e9",
+  flows: "#1f2937",
+} as const
+
 /** Propriété NAME_1 du fichier GADM `gadm41_TUN_1.json` → id interne (snake_case). */
 export const GADM_NAME_1_TO_GOVERNORATE_ID: Record<string, string> = {
   Ariana: "ariana",

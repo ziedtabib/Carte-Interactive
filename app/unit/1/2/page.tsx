@@ -11,7 +11,8 @@ import { InteractiveMapImage } from "@/components/interactive-map-image"
 import { ChapterChatbot } from "@/components/chapter-chatbot"
 import { UnitMapNav } from "@/components/unit-map-nav"
 import { cn } from "@/lib/utils"
-import { playSoundSimple, toggleBackgroundMusic } from "@/lib/sounds"
+import { playSoundSimple } from "@/lib/sounds"
+import { useBackgroundMusicToggle } from "@/hooks/useBackgroundMusicToggle"
 
 const MIGRATION_MAP_SRC =
   "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Capture%20d%27%C3%A9cran%202026-03-03%20151129-0Jyi053HtKdXLIPej9lZVf6hJjjuKy.png"
@@ -77,7 +78,7 @@ const quizQuestions = [
 export default function Unit1Map2Page() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [isSoundEnabled, setIsSoundEnabled] = useState(true)
-  const [isMusicOn, setIsMusicOn] = useState(false)
+  const { isMusicOn, toggleMusic: toggleSiteMusic } = useBackgroundMusicToggle()
 
   const playSound = (type: "click" | "pop" | "success" | "magic") => {
     if (!isSoundEnabled) return
@@ -90,9 +91,7 @@ export default function Unit1Map2Page() {
   }
 
   const toggleMusic = () => {
-    const newState = !isMusicOn
-    setIsMusicOn(newState)
-    toggleBackgroundMusic(newState)
+    toggleSiteMusic()
     playSound("click")
   }
 

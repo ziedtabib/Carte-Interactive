@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import { Noto_Sans_Arabic } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
+import { AnalyticsInit } from '@/components/analytics-init'
+import { Providers } from './providers'
 
 const notoArabic = Noto_Sans_Arabic({ 
   subsets: ["arabic"],
@@ -12,24 +14,7 @@ const notoArabic = Noto_Sans_Arabic({
 export const metadata: Metadata = {
   title: 'تونس الرقمية : رحلة في قلب الخريطة',
   description: 'تطبيق تعليمي تفاعلي لمادة الجغرافيا - السنة السادسة ابتدائي',
-  generator: 'v0.app',
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
-  },
+
 }
 
 export default function RootLayout({
@@ -40,7 +25,8 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl">
       <body className={`${notoArabic.className} antialiased`}>
-        {children}
+        <AnalyticsInit />
+        <Providers>{children}</Providers>
         <Analytics />
       </body>
     </html>

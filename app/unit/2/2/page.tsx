@@ -10,7 +10,8 @@ import { QuizDialog } from "@/components/quiz-dialog"
 import { InteractiveMapImage } from "@/components/interactive-map-image"
 import { ChapterChatbot } from "@/components/chapter-chatbot"
 import { UnitMapNav } from "@/components/unit-map-nav"
-import { playSoundSimple, toggleBackgroundMusic } from "@/lib/sounds"
+import { playSoundSimple } from "@/lib/sounds"
+import { useBackgroundMusicToggle } from "@/hooks/useBackgroundMusicToggle"
 
 const AGRICULTURE_PRODUCTION_MAP_SRC =
   "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Capture%20d%27%C3%A9cran%202026-03-03%20151140-z7ROZKNoVWQsjp3l0z2kqG1ExhulTc.png"
@@ -38,7 +39,7 @@ const quizQuestions = [
 
 export default function Unit2Map2Page() {
   const [isSoundEnabled, setIsSoundEnabled] = useState(true)
-  const [isMusicOn, setIsMusicOn] = useState(false)
+  const { isMusicOn, toggleMusic: toggleSiteMusic } = useBackgroundMusicToggle()
 
   const playSound = (type: "click" | "pop" | "success" | "magic") => {
     if (!isSoundEnabled) return
@@ -46,9 +47,7 @@ export default function Unit2Map2Page() {
   }
 
   const toggleMusic = () => {
-    const newState = !isMusicOn
-    setIsMusicOn(newState)
-    toggleBackgroundMusic(newState)
+    toggleSiteMusic()
     playSound("click")
   }
 

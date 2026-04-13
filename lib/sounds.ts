@@ -67,22 +67,80 @@ export function playSoundSimple(type: SoundType, volume: number = 0.5): void {
   }
 }
 
+/** Fichier dans `public/music/` — encodé pour les caractères spéciaux dans l’URL */
+export const BACKGROUND_MUSIC_SRC =
+  "/music/" + encodeURIComponent("[Dora ]أهلاً......ited].mp3")
+
 // Background music controller
 let bgMusic: HTMLAudioElement | null = null
 
-export function toggleBackgroundMusic(play: boolean): void {
-  if (play) {
-    if (!bgMusic) {
-      bgMusic = new Audio("https://assets.mixkit.co/active_storage/sfx/123/123-preview.mp3")
-      bgMusic.loop = true
-      bgMusic.volume = 0.1
+function ensureBgMusic(): HTMLAudioElement {
+  if (!bgMusic) {
+    bgMusic = new Audio(BACKGROUND_MUSIC_SRC)
+    bgMusic.loop = false
+    bgMusic.volume = 0.28
+    const emit = () => {
+      window.dispatchEvent(
+        new CustomEvent("site-background-music", { detail: { playing: !bgMusic!.paused } })
+      )
     }
-    bgMusic.play().catch(() => {})
+    bgMusic.addEventListener("play", emit)
+    bgMusic.addEventListener("pause", emit)
+    bgMusic.addEventListener("ended", () => {
+      window.dispatchEvent(new CustomEvent("site-background-music", { detail: { playing: false } }))
+    })
+  }
+  return bgMusic
+}
+
+export function toggleBackgroundMusic(play: boolean): void {
+  const audio = ensureBgMusic()
+  if (play) {
+    audio.play().catch(() => {})
   } else {
-    bgMusic?.pause()
+    audio.pause()
   }
 }
 
 export function isMusicPlaying(): boolean {
   return bgMusic ? !bgMusic.paused : false
+}
+
+let siteMusicAutoplayRegistered = false
+
+/**
+ * À l’ouverture du site : tente de lancer la musique une fois (sans boucle).
+ * Si le navigateur bloque l’autoplay, la lecture démarre au premier clic / toucher / touche.
+ */
+export function registerSiteMusicAutoplay(): void {
+  if (typeof window === "undefined" || siteMusicAutoplayRegistered) return
+  siteMusicAutoplayRegistered = true
+
+  const audio = ensureBgMusic()
+  let interactionListenersRemoved = false
+
+  const removeListeners = () => {
+    if (interactionListenersRemoved) return
+    interactionListenersRemoved = true
+    document.removeEventListener("click", unlockFromInteraction)
+    document.removeEventListener("touchstart", unlockFromInteraction)
+    document.removeEventListener("keydown", unlockFromInteraction)
+  }
+
+  /** Débloque l’autoplay après un geste utilisateur (politique navigateur). */
+  const unlockFromInteraction = () => {
+    audio
+      .play()
+      .then(() => removeListeners())
+      .catch(() => {})
+  }
+
+  audio
+    .play()
+    .then(() => removeListeners())
+    .catch(() => {
+      document.addEventListener("click", unlockFromInteraction, { passive: true })
+      document.addEventListener("touchstart", unlockFromInteraction, { passive: true })
+      document.addEventListener("keydown", unlockFromInteraction)
+    })
 }

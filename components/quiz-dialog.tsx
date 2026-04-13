@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { CheckCircle2, XCircle, Trophy, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Confetti } from "./confetti"
 import { ExplorerCharacter } from "./explorer-character"
+import { useGamification } from "@/store/gamification-context"
 
 interface QuizQuestion {
   question: string
@@ -25,15 +26,41 @@ interface QuizDialogProps {
   questions: QuizQuestion[]
   title?: string
   children: React.ReactNode
+  /** When set, results feed gamification + analytics */
+  unitNumber?: 1 | 2 | 3 | 4
+  mapIndex?: number
+  onQuizComplete?: (score: number, total: number) => void
 }
 
-export function QuizDialog({ questions, title = "اختبر معلوماتك", children }: QuizDialogProps) {
+export function QuizDialog({
+  questions,
+  title = "اختبر معلوماتك",
+  children,
+  unitNumber,
+  mapIndex = 0,
+  onQuizComplete,
+}: QuizDialogProps) {
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
   const [score, setScore] = useState(0)
   const [showResult, setShowResult] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
   const [answered, setAnswered] = useState(false)
+  const resultSynced = useRef(false)
+  const { registerQuizResult } = useGamification()
+
+  useEffect(() => {
+    if (!showResult) {
+      resultSynced.current = false
+      return
+    }
+    if (resultSynced.current) return
+    resultSynced.current = true
+    if (unitNumber) {
+      registerQuizResult(unitNumber, mapIndex, score, questions.length)
+    }
+    onQuizComplete?.(score, questions.length)
+  }, [showResult, score, questions.length, unitNumber, mapIndex, registerQuizResult, onQuizComplete])
 
   const handleAnswer = (index: number) => {
     if (answered) return

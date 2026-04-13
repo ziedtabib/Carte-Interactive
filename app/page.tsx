@@ -13,7 +13,7 @@ const units = [
     subtitle: "درس واحد · خريطتان",
     unitNumber: 1,
     href: "/unit/1/1",
-    mapImage: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Capture%20d%27%C3%A9cran%202026-03-03%20151134-1EyzN1GY1GyrS8bp6OzdPFwFm3Tqrt.png",
+    mapImage: "/population.jpg",
     colorClass: "bg-gradient-to-br from-orange-500 to-red-500",
     hoverDescription: "اكتشف كيف يتوزع التونسيون و كيف يتنقلون",
     hoverImage: "/Dora_photo1.webp"
@@ -23,7 +23,7 @@ const units = [
     subtitle: "درسان · خريطتان",
     unitNumber: 2,
     href: "/unit/2/1",
-    mapImage: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Capture%20d%27%C3%A9cran%202026-03-03%20151146-twyQ9soxtdaWcRLsR1psRbeKwTsoLb.png",
+    mapImage: "/agriculture.jpg",
     colorClass: "bg-gradient-to-br from-purple-600 to-blue-500",
     hoverDescription: "اكتشف الموارد الفلاحية و الصيد البحري في تونس",
     hoverImage: "/dora2.webp"
@@ -33,7 +33,7 @@ const units = [
     subtitle: "درسان · خريطتان",
     unitNumber: 3,
     href: "/unit/3/1",
-    mapImage: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Capture%20d%27%C3%A9cran%202026-03-03%20151129-0Jyi053HtKdXLIPej9lZVf6hJjjuKy.png",
+    mapImage: "/sine3a.jpg",
     colorClass: "bg-gradient-to-br from-pink-500 to-cyan-500",
     hoverDescription: "اكتشف أهم المناطق والأنشطة الصناعية في تونس",
     hoverImage: "/dora3.webp"
@@ -43,7 +43,7 @@ const units = [
     subtitle: "درس واحد · خريطة واحدة",
     unitNumber: 4,
     href: "/unit/4/1",
-    mapImage: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Capture%20d%27%C3%A9cran%202026-03-03%20151140-z7ROZKNoVWQsjp3l0z2kqG1ExhulTc.png",
+    mapImage: "/tourist.jpg",
     colorClass: "bg-gradient-to-br from-green-500 to-emerald-600",
     hoverDescription: "اكتشف أجمل الوجهات السياحية في تونس",
     hoverImage: "/dora4.jpg"

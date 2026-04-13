@@ -1,21 +1,34 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { ArrowRight, HelpCircle, BookOpen, Users, Building2, MapPin, Volume2, VolumeX, Sparkles, Music, MicOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ExplorerCharacter } from "@/components/explorer-character"
 import { SpeechBubble } from "@/components/speech-bubble"
 import { QuizDialog } from "@/components/quiz-dialog"
-import { InteractiveMapImage } from "@/components/interactive-map-image"
+import { InteractiveTunisiaMap } from "@/components/maps/InteractiveTunisiaMap"
 import { ChapterChatbot } from "@/components/chapter-chatbot"
 import { UnitMapNav } from "@/components/unit-map-nav"
+import { AudioPlayer } from "@/components/audio/AudioPlayer"
+import { UnitProgressBar } from "@/components/progress/UnitProgressBar"
 import { cn } from "@/lib/utils"
-import { playSoundSimple, toggleBackgroundMusic } from "@/lib/sounds"
+import { playSoundSimple } from "@/lib/sounds"
+import { useBackgroundMusicToggle } from "@/hooks/useBackgroundMusicToggle"
+import { governorates, type GovernorateData } from "@/lib/tunisia-geojson"
+import { addTimeSpent } from "@/lib/analytics"
+import { useGamification } from "@/store/gamification-context"
+import { getRecommendedNextStep } from "@/lib/recommendations"
 
 const UNIT_1_LESSON =
   "الدرس 1: التوزع الجغرافي للسكان والأدفاق الهجرية في البلاد التونسية"
 const MAP_1_TITLE = "الخريطة 1: الكثافات السكانية والمدن بالبلاد التونسية"
+
+const LESSON_READ_ALOUD = `${UNIT_1_LESSON}. الكثافة السكانية هي عدد السكان في كل كيلومتر مربع. في تونس، الساحل والعاصمة أكثر كثافة، والجنوب أقل كثافة بسبب المناخ.`
+
+function legendIdFromDensity(d: GovernorateData["density"]): string {
+  return { very_high: "very-high", high: "high", medium: "medium", low: "low" }[d]
+}
 
 const legendItems = [
   { id: "very-high", label: "كثافة مرتفعة جداً", description: "أكثر من 500 ن/كم²", color: "#dc2626", icon: Building2 },
@@ -86,8 +99,24 @@ const quizQuestions = [
 
 export default function Unit1Map1Page() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [selectedGovId, setSelectedGovId] = useState<string | null>(null)
+  const [hoveredGovId, setHoveredGovId] = useState<string | null>(null)
   const [isSoundEnabled, setIsSoundEnabled] = useState(true)
-  const [isMusicOn, setIsMusicOn] = useState(false)
+  const { isMusicOn, toggleMusic: toggleSiteMusic } = useBackgroundMusicToggle()
+
+  const { progressByUnit, score, unlockedBadges, registerMapInteraction, bumpProgress } = useGamification()
+  const progress = progressByUnit[1] ?? 0
+  const badges = unlockedBadges
+
+  const selectedGov = useMemo(
+    () => (selectedGovId ? governorates.find((g) => g.id === selectedGovId) : undefined),
+    [selectedGovId]
+  )
+
+  useEffect(() => {
+    const t0 = Date.now()
+    return () => addTimeSpent(1, Date.now() - t0)
+  }, [])
 
   const playSound = (type: "click" | "pop" | "success" | "magic") => {
     if (!isSoundEnabled) return
@@ -96,17 +125,17 @@ export default function Unit1Map1Page() {
 
   const handleLegendClick = (id: string) => {
     playSound("pop")
+    setSelectedGovId(null)
     setActiveCategory(activeCategory === id ? null : id)
   }
 
   const toggleMusic = () => {
-    const newState = !isMusicOn
-    setIsMusicOn(newState)
-    toggleBackgroundMusic(newState)
+    toggleSiteMusic()
     playSound("click")
   }
 
-  const selectedDensity = activeCategory ? densityData[activeCategory] : null
+  const selectedDensity = activeCategory && !selectedGov ? densityData[activeCategory] : null
+  const rec = getRecommendedNextStep(1, 1)
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-red-50 via-green-50 to-amber-50">
@@ -167,6 +196,21 @@ export default function Unit1Map1Page() {
       </header>
 
       <main className="container mx-auto px-4 py-6">
+        <div className="mb-6 space-y-3 rounded-2xl border border-red-200 bg-white/80 p-4 shadow-sm transition-opacity duration-300">
+          <UnitProgressBar unit={1} progress={progress} label="تقدّمك في هذه الوحدة" accentClass="bg-red-600" />
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+            <span>النقاط: {score}</span>
+            {badges.length > 0 && <span>شارات: {badges.length}</span>}
+          </div>
+          <AudioPlayer lessonText={LESSON_READ_ALOUD} />
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            <strong>اقتراح:</strong> {rec.messageAr}{" "}
+            <Link href={rec.href} className="text-red-700 underline font-medium">
+              انتقل
+            </Link>
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           
           <aside className="lg:col-span-3 order-2 lg:order-1 space-y-4">
@@ -184,6 +228,7 @@ export default function Unit1Map1Page() {
                   return (
                     <button
                       key={item.id}
+                      type="button"
                       onClick={() => handleLegendClick(item.id)}
                       className={cn(
                         "w-full p-4 rounded-2xl border-2 transition-all duration-300 text-right",
@@ -214,7 +259,13 @@ export default function Unit1Map1Page() {
               </div>
             </div>
             
-            <QuizDialog questions={quizQuestions} title="اختبر معلوماتك عن الكثافة السكانية">
+            <QuizDialog
+              questions={quizQuestions}
+              title="اختبر معلوماتك عن الكثافة السكانية"
+              unitNumber={1}
+              mapIndex={1}
+              onQuizComplete={() => bumpProgress(1, 0.15)}
+            >
               <Button className="w-full py-6 text-lg rounded-2xl bg-gradient-to-l from-red-600 to-orange-500 hover:from-red-700 hover:to-orange-600 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
                 <HelpCircle className="w-6 h-6 ml-2" />
                 اختبر معلوماتك
@@ -222,17 +273,28 @@ export default function Unit1Map1Page() {
             </QuizDialog>
           </aside>
 
-          <div className="lg:col-span-5 order-1 lg:order-2">
-            <div className="bg-white rounded-3xl p-4 shadow-xl border-2 border-red-200 overflow-hidden">
-              <InteractiveMapImage
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Capture%20d%27%C3%A9cran%202026-03-03%20151134-1EyzN1GY1GyrS8bp6OzdPFwFm3Tqrt.png"
-                alt="خريطة الكثافات السكانية والمدن بالبلاد التونسية"
-                title={MAP_1_TITLE}
-                highlightColor={activeCategory ? legendItems.find(l => l.id === activeCategory)?.color : undefined}
-              />
-            </div>
+          <div className="lg:col-span-5 order-1 lg:order-2 space-y-3">
+            <InteractiveTunisiaMap
+              title={MAP_1_TITLE}
+              mapMode="density"
+              showCategoryCounts
+              activeLegendCategory={activeCategory}
+              selectedGovernorateId={selectedGovId}
+              hoveredGovernorateId={hoveredGovId}
+              onSelectGovernorate={(id) => {
+                playSound("pop")
+                const g = governorates.find((x) => x.id === id)
+                if (g) {
+                  setSelectedGovId(id)
+                  setActiveCategory(legendIdFromDensity(g.density))
+                  registerMapInteraction(1)
+                  bumpProgress(1, 0.05)
+                }
+              }}
+              onHoverGovernorate={setHoveredGovId}
+            />
             
-            <div className="mt-4 bg-white/80 backdrop-blur-sm rounded-2xl p-4 flex items-center justify-center gap-4 text-sm flex-wrap">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 flex items-center justify-center gap-4 text-sm flex-wrap">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded bg-red-600"></div>
                 <span>مرتفعة جداً</span>
@@ -256,10 +318,21 @@ export default function Unit1Map1Page() {
             <div className="bg-white rounded-3xl p-5 shadow-xl border-2 border-red-200">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">
-                  <ExplorerCharacter size="sm" waving={!selectedDensity} />
+                  <ExplorerCharacter size="sm" waving={!selectedDensity && !selectedGov} />
                 </div>
                 <div className="flex-1">
-                  {selectedDensity ? (
+                  {selectedGov ? (
+                    <SpeechBubble direction="right" className="animate-fade-in">
+                      <h3 className="font-bold text-xl text-red-700 mb-2">{selectedGov.nameAr}</h3>
+                      <p className="leading-relaxed text-foreground">
+                        عدد السكان تقريباً: {selectedGov.population.toLocaleString("ar-TN")}. الكثافة ضمن فئة{" "}
+                        {legendItems.find((l) => l.id === legendIdFromDensity(selectedGov.density))?.label}.
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        اضغط على مفتاح آخر أو على ولاية أخرى في الخريطة التفاعلية.
+                      </p>
+                    </SpeechBubble>
+                  ) : selectedDensity ? (
                     <SpeechBubble direction="right" className="animate-fade-in">
                       <div className="flex items-center gap-2 mb-3">
                         <div 
@@ -290,9 +363,7 @@ export default function Unit1Map1Page() {
                       <p className="text-foreground leading-relaxed">
                         مرحباً! <strong className="text-red-600">الوحدة الأولى: البلاد التونسية: السكان</strong>
                         <br />
-                        في هذا الدرس سنتعرف على توزيع السكان في تونس.
-                        <br /><br />
-                        <strong className="text-red-600">اضغط على أحد الألوان في المفتاح</strong> لتكتشف معلومات عن كل منطقة!
+                        جرّب <strong className="text-red-600">الخريطة التفاعلية</strong>: اضغط على ولاية أو اختر لوناً من المفتاح.
                       </p>
                     </SpeechBubble>
                   )}

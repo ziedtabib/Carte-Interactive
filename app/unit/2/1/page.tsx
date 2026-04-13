@@ -11,7 +11,8 @@ import { InteractiveMapImage } from "@/components/interactive-map-image"
 import { ChapterChatbot } from "@/components/chapter-chatbot"
 import { UnitMapNav } from "@/components/unit-map-nav"
 import { cn } from "@/lib/utils"
-import { playSoundSimple, toggleBackgroundMusic } from "@/lib/sounds"
+import { playSoundSimple } from "@/lib/sounds"
+import { useBackgroundMusicToggle } from "@/hooks/useBackgroundMusicToggle"
 
 const UNIT_2_LESSON_1 = "الدرس 1: ظروف النشاط الفلاحي الطبيعية والبشرية"
 const UNIT_2_MAP_CLIMATE = "الخريطة: المناخات بالبلاد التونسية"
@@ -81,7 +82,7 @@ const quizQuestions = [
 export default function Unit2Map1Page() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [isSoundEnabled, setIsSoundEnabled] = useState(true)
-  const [isMusicOn, setIsMusicOn] = useState(false)
+  const { isMusicOn, toggleMusic: toggleSiteMusic } = useBackgroundMusicToggle()
 
   const playSound = (type: "click" | "pop" | "success" | "magic") => {
     if (!isSoundEnabled) return
@@ -94,9 +95,7 @@ export default function Unit2Map1Page() {
   }
 
   const toggleMusic = () => {
-    const newState = !isMusicOn
-    setIsMusicOn(newState)
-    toggleBackgroundMusic(newState)
+    toggleSiteMusic()
     playSound("click")
   }
 

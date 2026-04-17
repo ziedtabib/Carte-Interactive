@@ -70,27 +70,50 @@ export function playSoundSimple(type: SoundType, volume: number = 0.5): void {
 /** Sons du مفتاح الخريطة (الكثافة) — `public/music/1.mp3` … `4.mp3` */
 export type DensityLegendSoundIndex = 1 | 2 | 3 | 4
 
-export function playDensityLegendSound(index: DensityLegendSoundIndex, volume = 0.42): void {
+let activeLegendAudio: HTMLAudioElement | null = null
+
+function playExclusiveLegendSound(src: string, volume: number): void {
   try {
-    const audio = new Audio(`/music/${index}.mp3`)
+    if (activeLegendAudio) {
+      activeLegendAudio.pause()
+      activeLegendAudio.currentTime = 0
+    }
+
+    const audio = new Audio(src)
     audio.volume = volume
-    void audio.play().catch(() => {})
+    activeLegendAudio = audio
+
+    audio.onended = () => {
+      if (activeLegendAudio === audio) {
+        activeLegendAudio = null
+      }
+    }
+
+    audio.onpause = () => {
+      if (audio.currentTime === 0 && activeLegendAudio === audio) {
+        activeLegendAudio = null
+      }
+    }
+
+    void audio.play().catch(() => {
+      if (activeLegendAudio === audio) {
+        activeLegendAudio = null
+      }
+    })
   } catch {
     /* ignore */
   }
+}
+
+export function playDensityLegendSound(index: DensityLegendSoundIndex, volume = 0.42): void {
+  playExclusiveLegendSound(`/music/${index}.mp3`, volume)
 }
 
 /** Sons du مفتاح الخريطة (الهجرة) — `public/music/11.mp3` … `13.mp3` */
 export type MigrationLegendSoundIndex = 11 | 12 | 13
 
 export function playMigrationLegendSound(index: MigrationLegendSoundIndex, volume = 0.42): void {
-  try {
-    const audio = new Audio(`/music/${index}.mp3`)
-    audio.volume = volume
-    void audio.play().catch(() => {})
-  } catch {
-    /* ignore */
-  }
+  playExclusiveLegendSound(`/music/${index}.mp3`, volume)
 }
 
 /** Fichier dans `public/music/` — encodé pour les caractères spéciaux dans l’URL */
@@ -99,6 +122,12 @@ export const BACKGROUND_MUSIC_SRC =
 
 /** Musique d’ambiance pour l’unité 1 (`public/music/unit1.mp3`) */
 export const UNIT_1_BACKGROUND_MUSIC_SRC = "/music/unit1.mp3"
+
+/** Musique d’ambiance pour الدرس 2 (الوحدة 2) — `public/music/unit2.2.mp3` */
+export const UNIT_2_LESSON_2_BACKGROUND_MUSIC_SRC = "/music/unit2.2.mp3"
+
+/** Musique d’ambiance pour الدرس 1 (الوحدة 3) — `public/music/unit3.1.mp3` */
+export const UNIT_3_LESSON_1_BACKGROUND_MUSIC_SRC = "/music/unit3.1.mp3"
 
 // Background music controller
 let bgMusic: HTMLAudioElement | null = null

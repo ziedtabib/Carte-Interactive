@@ -46,7 +46,7 @@ const units = [
     mapImage: "/tourist.jpg",
     colorClass: "bg-gradient-to-br from-green-500 to-emerald-600",
     hoverDescription: "اكتشف أجمل الوجهات السياحية في تونس",
-    hoverImage: "/dora4.jpg"
+    hoverImage: "/dora3.webp"
   }
 ]
 
@@ -75,7 +75,7 @@ export default function HomePage() {
               <MapPin className="w-10 h-10" />
             </div>
           
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+            <div className="flex flex-col lg:flex-row-reverse items-center justify-between gap-8">
               {/* Hero Content */}
               <div className="flex-1 text-center lg:text-right space-y-6 animate-fade-in">
                 <div className="inline-flex items-center gap-2 bg-secondary/20 text-secondary-foreground px-4 py-2 rounded-full text-sm font-medium">
@@ -105,9 +105,9 @@ export default function HomePage() {
                     <SpeechBubble
                       className={cn(
                         "mb-4 w-[280px] max-w-[90vw] z-20 animate-bounce-slow",
-                        "lg:mb-0 lg:absolute lg:top-6 lg:right-full lg:mr-6"
+                        "lg:mb-0 lg:absolute lg:top-6 lg:left-full lg:ml-6"
                       )}
-                      direction="right"
+                      direction="left"
                     >
                       <p className="text-base font-medium text-center">
                         أهلاً بك يا بطل! أنا دليلك في هذه الرحلة التعليمية. هيا نستكشف تونس معاً!
@@ -160,10 +160,38 @@ export default function HomePage() {
           <div className="container mx-auto max-w-4xl text-center">
             <h2 className="text-3xl font-bold text-foreground mb-6">عن المشروع</h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
-              تطبيق &quot;تونس الرقمية&quot; هو منصة تعليمية تفاعلية مصممة لتلاميذ السنة السادسة ابتدائي 
-              في النظام التعليمي التونسي. يهدف التطبيق إلى تبسيط مادة الجغرافيا وجعلها أكثر متعة 
-              من خلال الخرائط التفاعلية والاختبارات الممتعة.
+              في اطار مشروع ختم الدروس بعنوان &quot;الخريطة التفاعلية كوسيلة ايضاح بيداغوجي في تعلم مادة
+              الجغرافيا&quot; تم إنجاز هذا تطبيق &quot;تونس الرقمية&quot; من إعداد الطالبتين أميمة الطبيب و ملاك عزوز و
+              هو منصة تعليمية تفاعلية موجه لتلاميذ السنة السادسة ابتدائي في النظام التعليمي التونسي. يهدف
+              الموقع الى تبسيط مادة الجغرافيا وتسهيل فهمها الى جانب تحفيز التلاميذ و اثارة دافعيتهم نحو
+              التعلم من خلال الخرائط التفاعلية و الاختبارات المقدمة بما يجعل العملية التعليمية اكثر متعة.
             </p>
+          </div>
+        </section>
+
+        <section className="py-12 px-4 bg-white/70">
+          <div className="container mx-auto max-w-4xl text-center">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
+              امسح رمز QR لفتح الموقع
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              يمكنك فتح النسخة المنشورة مباشرة على هاتفك أو جهازك اللوحي.
+            </p>
+            <div className="mx-auto w-fit rounded-3xl bg-white p-4 shadow-lg">
+              <img
+                src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=https%3A%2F%2Fcarte-interactive-deploy.vercel.app%2F"
+                alt="QR code vers le site web"
+                className="h-[220px] w-[220px] rounded-2xl"
+              />
+            </div>
+            <a
+              href="https://carte-interactive-deploy.vercel.app/"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-6 inline-block text-primary font-semibold underline-offset-4 hover:underline"
+            >
+              https://carte-interactive-deploy.vercel.app/
+            </a>
           </div>
         </section>
 

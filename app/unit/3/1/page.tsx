@@ -1,90 +1,83 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ArrowRight, HelpCircle, BookOpen, MoveRight, TrendingUp, TrendingDown, Volume2, VolumeX, Home, Music, MicOff } from "lucide-react"
+import {
+  ArrowRight,
+  HelpCircle,
+  BookOpen,
+  MoveRight,
+  Volume2,
+  VolumeX,
+  Music,
+  MicOff,
+  Factory,
+  Users,
+  MapPin,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ExplorerCharacter } from "@/components/explorer-character"
 import { SpeechBubble } from "@/components/speech-bubble"
 import { QuizDialog } from "@/components/quiz-dialog"
-import { InteractiveMapImage } from "@/components/interactive-map-image"
+import { InteractiveTunisiaResourcesSvgMap } from "@/components/InteractiveTunisiaResourcesSvgMap"
 import { ChapterChatbot } from "@/components/chapter-chatbot"
 import { UnitMapNav } from "@/components/unit-map-nav"
-import { cn } from "@/lib/utils"
-import { playSoundSimple } from "@/lib/sounds"
-import { MIGRATION_LEGEND_COLORS } from "@/lib/tunisia-data"
+import {
+  playSoundSimple,
+  getBackgroundMusicLoop,
+  getBackgroundMusicSrc,
+  isMusicPlaying,
+  setBackgroundMusicLoop,
+  setBackgroundMusicSrc,
+  toggleBackgroundMusic,
+  UNIT_3_LESSON_1_BACKGROUND_MUSIC_SRC,
+} from "@/lib/sounds"
+import { RESOURCE_TYPE_LABELS, type TunisiaResourcePoint } from "@/lib/tunisia-resources"
 import { useBackgroundMusicToggle } from "@/hooks/useBackgroundMusicToggle"
 
 const UNIT_3_LESSON_1 = "الدرس 1: ظروف النشاط الصناعي: الموارد والظروف البشرية"
 const UNIT_3_MAP_RESOURCES = "الخريطة: الموارد الطاقية والمنجمية في البلاد التونسية"
 
-const legendItems = [
-  { id: "positive", label: "حصيلة هجرية إيجابية", description: "مناطق استقبال السكان", color: MIGRATION_LEGEND_COLORS.positive, icon: TrendingUp },
-  { id: "negative", label: "حصيلة هجرية سلبية", description: "مناطق تفقد السكان", color: MIGRATION_LEGEND_COLORS.negative, icon: TrendingDown },
-  { id: "flows", label: "الأدفاق الهجرية", description: "اتجاهات حركة السكان", color: MIGRATION_LEGEND_COLORS.flows, icon: MoveRight },
-]
-
-const migrationData: Record<string, {
-  name: string
-  regions: string[]
-  description: string
-  details: string
-  funFact: string
-}> = {
-  positive: {
-    name: "مناطق الاستقبال",
-    regions: ["تونس الكبرى", "صفاقس", "سوسة", "المنستير", "نابل"],
-    description: "هذه المناطق تستقبل السكان القادمين من الداخل. توفر فرص عمل أفضل وخدمات متطورة.",
-    details: "الساحل والعاصمة يجذبان الشباب بحثاً عن العمل والدراسة",
-    funFact: "تستقبل تونس الكبرى وحدها أكثر من 40% من المهاجرين الداخليين!"
-  },
-  negative: {
-    name: "مناطق الطرد",
-    regions: ["سيدي بوزيد", "القصرين", "قفصة", "جندوبة", "الكاف", "سليانة"],
-    description: "هذه المناطق تفقد سكانها الذين يهاجرون نحو الساحل والعاصمة بحثاً عن حياة أفضل.",
-    details: "ضعف فرص العمل والخدمات يدفع السكان للهجرة",
-    funFact: "بعض قرى الداخل فقدت أكثر من نصف سكانها في العقود الأخيرة!"
-  },
-  flows: {
-    name: "اتجاهات الهجرة",
-    regions: ["من الشمال الغربي", "من الوسط الغربي", "من الجنوب"],
-    description: "الأسهم السوداء على الخريطة تُظهر حركة السكان من الداخل نحو الساحل وتونس الكبرى.",
-    details: "الهجرة تتجه أساساً من الغرب والجنوب نحو الشرق والشمال",
-    funFact: "معظم المهاجرين هم شباب تتراوح أعمارهم بين 20 و35 سنة!"
-  }
-}
-
 const quizQuestions = [
   {
-    question: "ما معنى حصيلة هجرية إيجابية؟",
-    options: ["المنطقة تفقد سكانها", "المنطقة تستقبل سكاناً جدداً", "السكان لا يتحركون", "الهجرة نحو الخارج"],
-    correctIndex: 1
+    question: "ما أهم مورد معدني تونسي معروف عالمياً؟",
+    options: ["الرصاص فقط", "الفوسفاط", "الحديد فقط", "الملح فقط"],
+    correctIndex: 1,
   },
   {
-    question: "لماذا يهاجر السكان من الداخل نحو الساحل؟",
-    options: ["المناخ البارد", "البحث عن فرص العمل", "حب السفر", "الفضول فقط"],
-    correctIndex: 1
+    question: "ما وظيفة أنابيب النفط والغاز على الخريطة؟",
+    options: ["زينة فقط", "نقل الموائع من الحقول نحو الموانئ أو الشبكات", "لا وظيفة", "للري فقط"],
+    correctIndex: 1,
   },
   {
-    question: "أي منطقة لها حصيلة هجرية سلبية؟",
-    options: ["تونس العاصمة", "صفاقس", "سيدي بوزيد", "سوسة"],
-    correctIndex: 2
-  }
+    question: "أين يتركز غالباً إنتاج الفوسفاط في تونس؟",
+    options: ["الشمال فقط", "جهة قفصة والجنوب الغربي", "الجزر", "الشرق فقط"],
+    correctIndex: 1,
+  },
 ]
 
 export default function Unit3Map1Page() {
-  const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [selectedMapPoint, setSelectedMapPoint] = useState<TunisiaResourcePoint | null>(null)
   const [isSoundEnabled, setIsSoundEnabled] = useState(true)
   const { isMusicOn, toggleMusic: toggleSiteMusic } = useBackgroundMusicToggle()
+
+  useEffect(() => {
+    const prevSrc = getBackgroundMusicSrc()
+    const prevLoop = getBackgroundMusicLoop()
+    const prevWasPlaying = isMusicPlaying()
+    setBackgroundMusicSrc(UNIT_3_LESSON_1_BACKGROUND_MUSIC_SRC)
+    setBackgroundMusicLoop(false)
+    toggleBackgroundMusic(true)
+    return () => {
+      setBackgroundMusicSrc(prevSrc)
+      setBackgroundMusicLoop(prevLoop)
+      toggleBackgroundMusic(prevWasPlaying)
+    }
+  }, [])
 
   const playSound = (type: "click" | "pop" | "success" | "magic") => {
     if (!isSoundEnabled) return
     playSoundSimple(type, 0.3)
-  }
-
-  const handleLegendClick = (id: string) => {
-    playSound("pop")
-    setActiveCategory(activeCategory === id ? null : id)
   }
 
   const toggleMusic = () => {
@@ -92,7 +85,10 @@ export default function Unit3Map1Page() {
     playSound("click")
   }
 
-  const selectedMigration = activeCategory ? migrationData[activeCategory] : null
+  const handlePointSelect = (point: TunisiaResourcePoint | null) => {
+    setSelectedMapPoint(point)
+    if (point && isSoundEnabled) playSound("pop")
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 via-sky-50 to-slate-50">
@@ -155,123 +151,83 @@ export default function Unit3Map1Page() {
       </header>
 
       <main className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <aside className="lg:col-span-3 order-2 lg:order-1 space-y-4">
-            <div className="bg-white rounded-3xl p-5 shadow-xl border-2 border-pink-200">
-              <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-pink-700">
-                <div className="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-pink-600" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <aside className="order-2 space-y-4 lg:order-1 lg:col-span-3">
+            <div className="rounded-3xl border-2 border-pink-200 bg-white p-5 shadow-xl">
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-pink-700">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pink-100">
+                  <BookOpen className="h-5 w-5 text-pink-600" />
                 </div>
-                مفتاح الخريطة
+                كيف تستخدم الخريطة؟
               </h3>
-              
-              <div className="space-y-3">
-                {legendItems.map((item) => {
-                  const Icon = item.icon
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => handleLegendClick(item.id)}
-                      className={cn(
-                        "w-full p-4 rounded-2xl border-2 transition-all duration-300 text-right",
-                        "hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]",
-                        activeCategory === item.id 
-                          ? "border-pink-400 shadow-lg ring-2 ring-pink-200" 
-                          : "border-gray-100 hover:border-pink-200"
-                      )}
-                      style={{
-                        backgroundColor: activeCategory === item.id ? `${item.color}15` : "white"
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="w-12 h-12 rounded-xl flex items-center justify-center shadow-md"
-                          style={{ backgroundColor: item.color }}
-                        >
-                          <Icon className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-bold text-base">{item.label}</h4>
-                          <p className="text-sm text-muted-foreground">{item.description}</p>
-                        </div>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
+              <ul className="space-y-3 text-sm leading-relaxed text-foreground">
+                <li className="flex gap-2">
+                  <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-pink-600" />
+                  <span>
+                    اختر نوع المورد من <strong className="text-pink-700">المفتاح التفاعلي</strong> فوق الخريطة
+                    (الكل، نفط، غاز، فسفاط…).
+                  </span>
+                </li>
+                <li className="flex gap-2">
+                  <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-sky-600" />
+                  <span>
+                    مرّر الفأرة على <strong className="text-sky-700">الرموز</strong> لمعرفة الاسم والنوع، واضغط
+                    لقراءة التفاصيل في نافذة منبثقة.
+                  </span>
+                </li>
+              </ul>
             </div>
-            
-            <QuizDialog questions={quizQuestions} title="اختبر معلوماتك عن الخريطة">
-              <Button className="w-full py-6 text-lg rounded-2xl bg-gradient-to-l from-pink-600 to-sky-500 hover:from-pink-700 hover:to-sky-600 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]">
-                <HelpCircle className="w-6 h-6 ml-2" />
+
+            <QuizDialog
+              questions={quizQuestions}
+              title="اختبر معلوماتك عن الموارد الطاقية والمنجمية"
+              unitNumber={3}
+              mapIndex={1}
+            >
+              <Button className="w-full rounded-2xl bg-gradient-to-l from-pink-600 to-sky-500 py-6 text-lg shadow-xl transition-all duration-300 hover:scale-[1.02] hover:from-pink-700 hover:to-sky-600 hover:shadow-2xl">
+                <HelpCircle className="ml-2 h-6 w-6" />
                 اختبر معلوماتك
               </Button>
             </QuizDialog>
           </aside>
 
-          <div className="lg:col-span-5 order-1 lg:order-2">
-            <div className="bg-white rounded-3xl p-4 shadow-xl border-2 border-pink-200 overflow-hidden">
-              <InteractiveMapImage
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Capture%20d%27%C3%A9cran%202026-03-03%20151129-0Jyi053HtKdXLIPej9lZVf6hJjjuKy.png"
-                alt="خريطة الموارد الطاقية والمنجمية في البلاد التونسية"
-                title={UNIT_3_MAP_RESOURCES}
-                highlightColor={activeCategory ? legendItems.find(l => l.id === activeCategory)?.color : undefined}
-              />
+          <div className="order-1 lg:order-2 lg:col-span-5">
+            <div className="overflow-hidden rounded-3xl border-2 border-pink-200 bg-white p-3 shadow-xl sm:p-4">
+              <InteractiveTunisiaResourcesSvgMap title={UNIT_3_MAP_RESOURCES} onPointSelect={handlePointSelect} />
             </div>
-
-            <div className="mt-4 bg-white/80 backdrop-blur-sm rounded-2xl p-4 flex items-center justify-center gap-6 text-sm flex-wrap">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-pink-500"></div>
-                <span>حصيلة إيجابية</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded bg-sky-500"></div>
-                <span>حصيلة سلبية</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MoveRight className="w-4 h-4" />
-                <span>اتجاه الهجرة</span>
-              </div>
-            </div>
+            <p className="mt-3 text-center text-xs text-muted-foreground sm:text-sm">
+              خريطة متجهية من <code className="rounded bg-pink-50 px-1">/geo/gadm41_TUN_1.json</code> — رموز الموارد
+              بإحداثيات جغرافية
+              (نسب مئوية).
+            </p>
           </div>
 
-          <aside className="lg:col-span-4 order-3 space-y-4">
-            <div className="bg-white rounded-3xl p-5 shadow-xl border-2 border-pink-200">
+          <aside className="order-3 space-y-4 lg:col-span-4">
+            <div className="rounded-3xl border-2 border-pink-200 bg-white p-5 shadow-xl">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">
-                  <ExplorerCharacter size="sm" waving={!selectedMigration} />
+                  <ExplorerCharacter size="sm" waving={!selectedMapPoint} />
                 </div>
-                <div className="flex-1">
-                  {selectedMigration ? (
+                <div className="min-w-0 flex-1">
+                  {selectedMapPoint ? (
                     <SpeechBubble direction="right" className="animate-fade-in">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div 
-                          className="w-10 h-10 rounded-xl flex items-center justify-center"
-                          style={{ backgroundColor: legendItems.find(l => l.id === activeCategory)?.color }}
-                        >
-                          <MoveRight className="w-5 h-5 text-white" />
-                        </div>
-                        <h3 className="font-bold text-xl text-pink-700">{selectedMigration.name}</h3>
-                      </div>
-                      <div className="space-y-2 text-foreground">
-                        <p className="leading-relaxed">{selectedMigration.description}</p>
-                        <div className="bg-pink-50 rounded-xl p-3 mt-3">
-                          <p className="text-sm">{selectedMigration.details}</p>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          <strong>أمثلة:</strong> {selectedMigration.regions.join("، ")}
-                        </p>
-                      </div>
+                      <h3 className="mb-2 text-xl font-bold text-pink-700">{selectedMapPoint.name}</h3>
+                      <p className="mb-2 text-sm font-medium text-muted-foreground">
+                        {RESOURCE_TYPE_LABELS[selectedMapPoint.type]}
+                      </p>
+                      <p className="leading-relaxed text-foreground">{selectedMapPoint.description}</p>
                     </SpeechBubble>
                   ) : (
                     <SpeechBubble direction="right">
-                      <p className="text-foreground leading-relaxed">
+                      <p className="leading-relaxed text-foreground">
                         مرحباً!{" "}
                         <strong className="text-pink-600">الوحدة الثالثة: الصناعة بالبلاد التونسية</strong>
                         <br />
-                        في هذا الدرس نستكشف الموارد والظروف البشرية المرتبطة بالنشاط الصناعي.
-                        <br /><br />
-                        <strong className="text-pink-600">اضغط على أحد العناصر في المفتاح</strong> لمزيد من التفاصيل على الخريطة التفاعلية!
+                        الدرس يتناول <strong className="text-pink-600">الموارد الطاقية والمنجمية</strong>.
+                        <br />
+                        <br />
+                        <strong className="text-pink-600">اضغط على أحد الرموز على الخريطة</strong> لعرض شرح هنا، أو
+                        استخدم المفتاح أعلى الخريطة لتصفية الأنواع.
                       </p>
                     </SpeechBubble>
                   )}
@@ -281,28 +237,31 @@ export default function Unit3Map1Page() {
 
             <ChapterChatbot unitNumber={3} theme="pink" />
 
-            <div className="bg-white rounded-3xl p-5 shadow-xl border-2 border-pink-200">
-              <h3 className="font-bold text-lg text-foreground mb-4 flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-pink-600" />
+            <div className="rounded-3xl border-2 border-pink-200 bg-white p-5 shadow-xl">
+              <h3 className="mb-4 flex items-center gap-2 text-lg font-bold text-foreground">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-pink-100">
+                  <BookOpen className="h-5 w-5 text-pink-600" />
                 </div>
                 شرح الدرس
               </h3>
-              <div className="space-y-4 text-foreground leading-relaxed">
+              <div className="space-y-4 leading-relaxed text-foreground">
                 <p>
-                  <strong className="text-pink-600">الدرس 1</strong> يدعوك لقراءة خريطة الموارد الطاقية والمنجمية وفهم أين تتوفر الطاقة والمواد الأولية التي تغذي الصناعة.
+                  <strong className="text-pink-600">الدرس 1</strong> يدعوك لقراءة خريطة الموارد الطاقية والمنجمية
+                  وفهم أين تتوفر الطاقة والمواد الأولية التي تغذي الصناعة.
                 </p>
                 <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 bg-pink-50 rounded-xl">
-                    <TrendingUp className="w-6 h-6 text-pink-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex items-start gap-3 rounded-xl bg-pink-50 p-3">
+                    <Factory className="mt-0.5 h-6 w-6 flex-shrink-0 text-pink-600" />
                     <p>
-                      <strong className="text-pink-700">الموارد:</strong> اربط بين الموقع والأنشطة الصناعية المحتملة.
+                      <strong className="text-pink-700">الموارد:</strong> تموضع الرموز على الخريطة يعكس التوزع
+                      الجغرافي للحقول والمناجم والمرافق.
                     </p>
                   </div>
-                  <div className="flex items-start gap-3 p-3 bg-sky-50 rounded-xl">
-                    <TrendingDown className="w-6 h-6 text-sky-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex items-start gap-3 rounded-xl bg-sky-50 p-3">
+                    <Users className="mt-0.5 h-6 w-6 flex-shrink-0 text-sky-600" />
                     <p>
-                      <strong className="text-sky-700">الظروف البشرية:</strong> السكان، التكوين، النقل، والأسواق.
+                      <strong className="text-sky-700">الظروف البشرية:</strong> السكان، التكوين، النقل، والأسواق التي
+                      تستغل هذه الموارد.
                     </p>
                   </div>
                 </div>
@@ -314,8 +273,14 @@ export default function Unit3Map1Page() {
 
       <style jsx global>{`
         @keyframes fade-in {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
         .animate-fade-in {
           animation: fade-in 0.3s ease-out forwards;

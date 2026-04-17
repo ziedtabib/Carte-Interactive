@@ -68,7 +68,7 @@ export function InteractiveMapImage({ src, alt, title, className, highlightColor
         onMouseLeave={handleMouseUp}
       >
         <div
-          className="w-full h-full transition-transform duration-200"
+          className="relative w-full h-full transition-transform duration-200"
           style={{
             transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
           }}

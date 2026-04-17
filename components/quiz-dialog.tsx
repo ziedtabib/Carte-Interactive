@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import Image from "next/image"
 import { CheckCircle2, XCircle, Trophy, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -49,6 +50,16 @@ export function QuizDialog({
   const resultSynced = useRef(false)
   const { registerQuizResult } = useGamification()
 
+  const playCorrectAnswerSound = () => {
+    try {
+      const audio = new Audio("/music/reponse%20correct.mp3")
+      audio.volume = 0.5
+      void audio.play().catch(() => {})
+    } catch {
+      // Ignore playback errors.
+    }
+  }
+
   useEffect(() => {
     if (!showResult) {
       resultSynced.current = false
@@ -70,6 +81,7 @@ export function QuizDialog({
     if (index === questions[currentQuestion].correctIndex) {
       setScore(score + 1)
       setShowConfetti(true)
+      playCorrectAnswerSound()
       setTimeout(() => setShowConfetti(false), 2000)
     }
   }
@@ -167,6 +179,23 @@ export function QuizDialog({
                   </button>
                 ))}
               </div>
+
+              {answered && selectedAnswer === questions[currentQuestion].correctIndex && (
+                <div className="flex flex-col items-center gap-2 animate-fade-in">
+                  <div className="relative h-24 w-24">
+                    <Image
+                      src="/dora3.webp"
+                      alt="Dora heureuse"
+                      fill
+                      className="object-contain"
+                      sizes="96px"
+                    />
+                  </div>
+                  <p className="text-center text-lg font-semibold text-green-700">
+                    إجابة صحيحة! أحسنت!
+                  </p>
+                </div>
+              )}
 
               {/* Next button */}
               {answered && (

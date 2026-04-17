@@ -5,8 +5,7 @@ import Image from "next/image"
 import { ArrowLeft, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { playSoundSimple } from "@/lib/sounds"
-import { useRef, useState } from "react"
+import { useState } from "react"
 
 interface UnitCardProps {
   title: string
@@ -33,49 +32,13 @@ export function UnitCard({
   hoverImage
 }: UnitCardProps) {
   const [isHovering, setIsHovering] = useState(false)
-  const speakingRef = useRef(false)
-
-  const speakArabic = (text: string) => {
-    if (typeof window === "undefined") return
-    try {
-      // Stop previous speech before starting a new one.
-      window.speechSynthesis.cancel()
-
-      const utterance = new SpeechSynthesisUtterance(text)
-      utterance.lang = "ar-TN"
-      utterance.rate = 0.95
-      utterance.pitch = 1
-      utterance.volume = 1
-
-      speakingRef.current = true
-      utterance.onend = () => {
-        speakingRef.current = false
-      }
-      utterance.onerror = () => {
-        speakingRef.current = false
-      }
-
-      window.speechSynthesis.speak(utterance)
-    } catch {
-      // Ignore speech errors (some browsers may block without user gesture).
-    }
-  }
 
   const handleMouseEnter = () => {
     setIsHovering(true)
-    if (!hoverDescription) return
-
-    // Play a small UI sound + then speak the description.
-    playSoundSimple("whoosh", 0.35)
-    speakArabic(hoverDescription)
   }
 
   const handleMouseLeave = () => {
     setIsHovering(false)
-    if (typeof window !== "undefined") {
-      window.speechSynthesis.cancel()
-    }
-    speakingRef.current = false
   }
 
   return (
